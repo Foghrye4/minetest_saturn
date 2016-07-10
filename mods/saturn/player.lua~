@@ -20,7 +20,7 @@ local function define_player_inventory_slots(player, start_hull)
     local forcefield_generator_slots = hull_stats.forcefield_generator_slots
     local special_equipment_slots = hull_stats.special_equipment_slots
     player_inv:set_size("ship_hull", 1)
-    player_inv:set_size("hangar", 8)
+    player_inv:set_size("hangar", 6)
     remove_unfitted_items_to_hold(player_inv, "engine", engine_slots)
     remove_unfitted_items_to_hold(player_inv, "power_generator", power_generator_slots)
     remove_unfitted_items_to_hold(player_inv, "droid", droid_slots)
@@ -306,7 +306,7 @@ local hud_attack_info_text_definition = {
 
 local hud_attack_info_frame_definition = {
 		hud_elem_type = "image",
-		scale = { x=4, y=4 }, 
+		scale = { x=2, y=2 }, 
 		position = { x=0.5, y=0.5 },
 		size = { x=2, y=24 },
 		text = "null.png",
@@ -673,6 +673,19 @@ minetest.register_on_joinplayer(function(player)
 	end
 	if saturn.players_info[name] == nil then
 		create_new_player(player)
+	end
+	local flb_pos = saturn.players_info[placer:get_player_name()]['forceload_pos']
+	if flb_pos then
+		minetest.forceload_block(flb_pos)
+	end
+
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	saturn:save_players()
+	local flb_pos = saturn.players_info[placer:get_player_name()]['forceload_pos']
+	if flb_pos then
+		minetest.forceload_free_block(flb_pos)
 	end
 end)
 

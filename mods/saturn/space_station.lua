@@ -37,46 +37,50 @@ saturn.get_space_station_formspec = function(player, tab)
 	local name = player:get_player_name()
 	local default_formspec = 
 		"label[0,3.75;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
-		"tabheader[0,0;tabs;Market,Hangar and ship;"..tab..";true;false]"
+		"tabheader[0,0;tabs;Equipment market,Ore market,Microfactory market,Hangar and ship;"..tab..";true;false]"..
+		saturn.default_slot_color..
+		"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
+		"list[detached:space_station;buying_up_spot;7,4.5;1,1;]"..
+		"label[0,4.1;"..minetest.formspec_escape("Hangar: ").."]"..
+		"list[current_player;hangar;0,4.5;6,1;]"
+	for ix = 1, 6 do
+		default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+hangar+"..ix..";]"
+	end
 	if tab == 1 then
 		default_formspec = "size[8,7]"..
 		default_formspec..
-		"list[detached:space_station;market;0,0;8,3;]"
+		"list[detached:space_station;market;0,0;8,4;]"..
+		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
 		for ix = 1, 8 do
-			for iy = 0, 2 do
+			for iy = 0, 3 do
 				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+market+"..(ix+8*iy)..";]"
 			end
 		end
-		default_formspec = default_formspec .. "list[detached:space_station;buying_up_spot;0,3;8,1;]"..
-		"label[0,4;"..minetest.formspec_escape("Hangar: ").."]"..
-		"list[current_player;hangar;0,4.5;8,1;]"
-		for ix = 1, 8 do
-			default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+hangar+"..ix..";]"
-		end
-		default_formspec = default_formspec..
+	elseif tab == 2 then
+		default_formspec = "size[8,7]"..
+		default_formspec..
+		"list[detached:space_station;ore_market;0,0;8,4;]"..
 		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
+		for ix = 1, 8 do
+			for iy = 0, 3 do
+				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+ore_market+"..(ix+8*iy)..";]"
+			end
+		end
+	elseif tab == 3 then
+		default_formspec = "size[8,7]"..
+		default_formspec..
+		"list[detached:space_station;microfactory_market;0,0;8,4;]"..
+		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
+		for ix = 1, 8 do
+			for iy = 0, 3 do
+				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+microfatory_market+"..(ix+8*iy)..";]"
+			end
+		end
 	else
 		default_formspec = "size[8,9.75]"..
 		default_formspec..
 		saturn.get_ship_equipment_formspec(player)..
-		"label[0,4;"..minetest.formspec_escape("Hangar: ").."]"..
-		"list[current_player;hangar;0,4.5;8,1;]"
-		for ix = 1, 8 do
-			default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+hangar+"..ix..";]"
-		end
-		default_formspec = default_formspec..
-		"list[current_player;main;0,5.75;8,1;]"..
-		"list[current_player;main;0,7;8,3;8]"
-		for ix = 1, 8 do
-			for iy = 0, 3 do
-				if iy==0 then
-					default_formspec = default_formspec.."image_button["..(ix-0.19)..",5.75;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
-				else
-					default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy+6)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
-				end
-			end
-		end
-
+		saturn.get_main_inventory_formspec(player,5.75)
 	end
 	return default_formspec
 end
@@ -109,8 +113,10 @@ saturn.space_station_inv = minetest.create_detached_inventory("space_station", {
     end,
 })
 
-saturn.space_station_inv:set_size("market", 8 * 3)
-saturn.space_station_inv:set_size("buying_up_spot", 8)
+saturn.space_station_inv:set_size("market", 8 * 4)
+saturn.space_station_inv:set_size("ore_market", 8 * 4)
+saturn.space_station_inv:set_size("microfactory_market", 8 * 4)
+saturn.space_station_inv:set_size("buying_up_spot", 1)
 
 minetest.register_node("saturn:space_station_hull", {
 	description = "Space station hull",
@@ -145,10 +151,44 @@ minetest.register_node("saturn:space_station_hatch", {
 	end,
 })
 
-for i=0, 8*3 do
-	saturn:update_space_station_market()
-	saturn:update_space_station_market()
-	saturn:update_space_station_market()
-	saturn:update_space_station_market()
-	saturn:update_space_station_market()
+local generate_random_market_item = function()
+	local item_name = saturn.market_items[math.random(#saturn.market_items)]
+	return ItemStack(item_name)
+end
+
+local generate_random_ore_market_item = function()
+	local item_name = saturn.ore_market_items[math.random(#saturn.ore_market_items)]
+	return ItemStack(item_name.." 99")
+end
+
+local generate_random_microfactory_market_item = function()
+	local item_name = saturn.microfactory_market_items[math.random(#saturn.microfactory_market_items)]
+	return ItemStack(item_name)
+end
+
+local update_space_station_market = function()
+	local stack = generate_random_market_item()
+	if saturn.space_station_inv:room_for_item("market", stack) then
+		saturn.space_station_inv:add_item("market", stack)
+	else
+		saturn.space_station_inv:set_stack("market",math.random(8*4), stack)
+	end
+	local stack = generate_random_ore_market_item()
+	if saturn.space_station_inv:room_for_item("ore_market", stack) then
+		saturn.space_station_inv:add_item("ore_market", stack)
+	else
+		saturn.space_station_inv:set_stack("ore_market",math.random(8*4), stack)
+	end
+	local stack = generate_random_microfactory_market_item()
+	if saturn.space_station_inv:room_for_item("microfactory_market", stack) then
+		saturn.space_station_inv:add_item("microfactory_market", stack)
+	else
+		saturn.space_station_inv:set_stack("microfactory_market",math.random(8*4), stack)
+	end
+end
+
+saturn.update_space_station_market = update_space_station_market
+
+for i=0, 8*4 do
+	update_space_station_market()
 end

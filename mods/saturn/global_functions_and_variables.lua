@@ -1,5 +1,6 @@
 saturn.space_station_pos = {x = -64, y = -64, z = -64}
 
+saturn.default_slot_color = "listcolors[#80808069;#00000069;#141318;#30434C;#FFF]"
 saturn.MAX_ITEM_WEAR = 65535 -- Internal minetest constant and should not be changed
 saturn.REPAIR_PRICE_PER_WEAR = 0.0001
 saturn.saturn_spaceships = {}
@@ -9,8 +10,9 @@ saturn.save_timer = saturn.players_save_interval
 saturn.market_update_interval = 1000
 saturn.market_update_timer = saturn.market_update_interval
 saturn.item_stats = {}
-saturn.market_item_count = 0
 saturn.market_items = {}
+saturn.ore_market_items = {}
+saturn.microfactory_market_items = {}
 saturn.enemy_item_count = 0
 saturn.enemy_items = {}
 saturn.ores = {}
@@ -22,6 +24,8 @@ saturn.hud_attack_info_text_id = -1
 saturn.hud_attack_info_frame_id = -1
 saturn.hud_hotbar_cooldown = {}
 saturn.hotbar_cooldown = {}
+saturn.microfactory_nets = {}
+saturn.recipe_outputs = {}
 
 local fov = minetest.setting_get("fov")
 local fov_x = fov*1.1
@@ -431,13 +435,26 @@ local throwable_item_entity={
 
 minetest.register_entity("saturn:throwable_item_entity", throwable_item_entity)
 
+local get_color_formspec_frame = function(x,y,w,h,color,thickness)
+	return "box["..(x-thickness)..","..(y-thickness)..";"..(w+thickness-0.2)..","..(thickness)..";"..color.."]"..
+"box["..(x+w-0.2)..","..(y-thickness)..";"..(thickness)..","..(h+thickness-0.2)..";"..color.."]"..
+"box["..x..","..(y+h-0.2)..";"..(w+thickness-0.2)..","..(thickness)..";"..color.."]"..
+"box["..(x-thickness)..","..y..";"..(thickness)..","..(h+thickness-0.2)..";"..color.."]"
+end
+
+local get_formspec_label_with_bg_color = function(x,y,w,h,color,text)
+	return "box["..x..","..y..";"..w..","..h..";"..color.."]".."label["..x..","..(y-0.2)..";"..text.."]"
+end
+
+
 saturn.get_ship_equipment_formspec = function(player)
 	local inv = player:get_inventory()
 	local name = player:get_player_name()
-	local formspec = "list[current_player;ship_hull;0,0;1,1;]"..
+	local formspec = "list[current_player;ship_hull;0,0;1,1;]".."box[0,0;0.8,0.9;#FFFFFF]"..get_formspec_label_with_bg_color(0,1,0.8,0.2,"#FFFFFF","Hull")..
 	"image_button[0.81,0;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+ship_hull+1;]"
 	if inv:get_size("engine") > 0 then
-		formspec = formspec.."list[current_player;engine;1,0;2,4;]"
+		formspec = formspec.."box[1,0;1.8,3.9;#FFA800]"..get_formspec_label_with_bg_color(0,1.4,0.8,0.2,"#FFA800","Engine")..
+		"list[current_player;engine;1,0;2,4;]"
 		for ix = 1, 2 do
 			for iy = 0, math.ceil(inv:get_size("engine")/2)-1 do
 				formspec = formspec.."image_button["..(ix+0.81)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+engine+"..(ix+2*iy)..";]"
@@ -445,31 +462,36 @@ saturn.get_ship_equipment_formspec = function(player)
 		end
 	end
 	if inv:get_size("power_generator") > 0 then
-		formspec = formspec.."list[current_player;power_generator;3,0;1,4;]"
+		formspec = formspec.."box[3,0;0.8,3.9;#FF2200]"..get_formspec_label_with_bg_color(0,1.8,0.8,0.2,"#FF2200","Power")..
+		"list[current_player;power_generator;3,0;1,4;]"
 		for iy = 0, inv:get_size("power_generator")-1 do
 			formspec = formspec.."image_button[3.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+power_generator+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("droid") > 0 then
-		formspec = formspec.."list[current_player;droid;4,0;1,4;]"
+		formspec = formspec.."box[4,0;0.8,3.9;#770000]"..get_formspec_label_with_bg_color(0,2.2,0.8,0.2,"#770000","Droids")..
+		"list[current_player;droid;4,0;1,4;]"
 		for iy = 0, inv:get_size("droid")-1 do
 			formspec = formspec.."image_button[4.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+droid+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("scaner") > 0 then
-		formspec = formspec.."list[current_player;scaner;5,0;1,4;]"
+		formspec = formspec.."box[5,0;0.8,3.9;#00FFF0]"..get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Scaner")..
+		"list[current_player;scaner;5,0;1,4;]"
 		for iy = 0, inv:get_size("scaner")-1 do
 			formspec = formspec.."image_button[5.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+scaner+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("forcefield_generator") > 0 then
-		formspec = formspec.."list[current_player;forcefield_generator;6,0;1,1;]"
+		formspec = formspec.."box[6,0;0.8,0.9;#A0A0FF]"..get_formspec_label_with_bg_color(0,3,0.8,0.2,"#A0A0FF","Forcefield")..
+		"list[current_player;forcefield_generator;6,0;1,1;]"
 		for iy = 0, inv:get_size("forcefield_generator")-1 do
 			formspec = formspec.."image_button[6.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+forcefield_generator+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("special_equipment") > 0 then
-		formspec = formspec.."list[current_player;special_equipment;7,0;1,4;]"
+		formspec = formspec.."box[7,0;0.8,3.9;#A0FFA0]"..get_formspec_label_with_bg_color(0,3.4,0.8,0.2,"#A0FFA0","Special")..
+		"list[current_player;special_equipment;7,0;1,4;]"
 		for iy = 0, inv:get_size("special_equipment")-1 do
 			formspec = formspec.."image_button[7.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+special_equipment+"..(iy+1)..";]"
 		end
@@ -477,21 +499,27 @@ saturn.get_ship_equipment_formspec = function(player)
 	return formspec
 end
 
-saturn.get_player_inventory_formspec = function(player, tab)
-	local name = player:get_player_name()
-	local default_formspec = "size[8,8.6]"..
-			"list[current_player;main;0,4.25;8,1;]"..
-			"list[current_player;main;0,5.5;8,3;8]"..
-			"tabheader[0,0;tabs;Status,Hull;"..tab..";true;false]"
+saturn.get_main_inventory_formspec = function(player, vertical_offset)
+	local default_formspec = "list[current_player;main;0,"..vertical_offset..";8,1;]"..
+			"list[current_player;main;0,"..(vertical_offset+1.25)..";8,3;8]"..
+			saturn.default_slot_color
 	for ix = 1, 8 do
 		for iy = 0, 3 do
 			if iy==0 then
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.25;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
+				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..vertical_offset..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
 			else
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy+4.5)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
+				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy+vertical_offset+0.25)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
 			end
 		end
 	end
+	return default_formspec
+end
+
+saturn.get_player_inventory_formspec = function(player, tab)
+	local name = player:get_player_name()
+	local default_formspec = "size[8,8.6]"..
+			"tabheader[0,0;tabs;Status,Hull;"..tab..";true;false]"..
+			saturn.get_main_inventory_formspec(player,4.25)
 	local hull = player:get_inventory():get_stack("ship_hull", 1)
 	local hull_stats = saturn.get_item_stats(hull:get_name())
 	if hull_stats then
@@ -529,8 +557,7 @@ saturn.get_item_info_formspec = function(item_stack)
 	local formspec = "size[8,8.6]"..
 		"item_image[0,0;1,1;"..item_name.."]"..
 		"label[1,0.0;"..item_name.."]"..
-		"label[7,0;Back]"..
-		"image_button[7.5,0.1;0.5,0.4;saturn_back_button_icon.png;ii_return;]"
+		"image_button[6.5,0.1;1.5,0.4;saturn_back_button_icon.png;ii_return;Back  ;false;false;saturn_back_button_icon.png]"
 	local row_step = 0.3
 	local row = 1-row_step
 	formspec = formspec.."label[0,"..row..";Basic properties:]"
@@ -615,17 +642,12 @@ saturn.get_item_price = function(item_name)
 	return 0
 end
 
-local generate_random_market_item = function()
-	local item_name = saturn.market_items[math.random(saturn.market_item_count)]
-	return ItemStack(item_name)
-end
-
 saturn.get_pseudogaussian_random = function(median, scale)
 	return math.tan(math.random()*math.pi/2)*scale+median
 end
 
 saturn.generate_random_enemy_item = function()
-	local item_name = saturn.enemy_items[math.random(saturn.enemy_item_count)]
+	local item_name = saturn.enemy_items[math.random(#saturn.enemy_items)]
 	local item_stack = ItemStack(item_name)
 	local item_stats = saturn.item_stats[item_name]
 	local possible_modifications = item_stats.possible_modifications
@@ -647,15 +669,6 @@ saturn.generate_random_enemy_item = function()
 		item_stack:set_metadata(minetest.serialize(modifications))
 	end
 	return item_stack
-end
-
-saturn.update_space_station_market = function()
-	local stack = generate_random_market_item()
-	if saturn.space_station_inv:room_for_item("market", stack) then
-		saturn.space_station_inv:add_item("market", stack)
-	else
-		saturn.space_station_inv:set_stack("market",math.random(8*3), stack)
-	end
 end
 
 minetest.register_globalstep(function(dtime)
@@ -691,9 +704,5 @@ minetest.register_globalstep(function(dtime)
 end)
 
 minetest.register_on_shutdown(function()
-	saturn:save_players()
-end)
-
-minetest.register_on_leaveplayer(function(player)
 	saturn:save_players()
 end)

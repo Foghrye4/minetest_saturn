@@ -22,7 +22,9 @@ local function register_node_with_stats(registry_name, node_definition, stats)
 		return itemstack
 	end
 	local t = node_definition.tiles
-	node_definition.tiles = {t,t,t,t,t,t}
+	if type(t) == "string" then
+		node_definition.tiles = {t,t,t,t,t,t}
+	end
 	node_definition.wield_image = "null.png"
         node_definition.sounds = {
             dig =  {name="saturn_retractor", gain=0.5},
@@ -31,14 +33,18 @@ local function register_node_with_stats(registry_name, node_definition, stats)
 	minetest.register_node(registry_name, node_definition)
 	saturn.set_item_stats(registry_name, stats)
 	if stats.is_market_item then
-		local _market_item_count = saturn.market_item_count + 1
-		saturn.market_items[_market_item_count] = registry_name
-		saturn.market_item_count = _market_item_count
+		table.insert(saturn.market_items, registry_name)
 	end
 	if stats.is_ore then
+		table.insert(saturn.ore_market_items, registry_name)
 		saturn.ores[registry_name] = stats
 	end
+	if stats.is_microfactory then
+		table.insert(saturn.microfactory_market_items, registry_name)
+	end
 end
+
+saturn.register_node_with_stats = register_node_with_stats
 
 register_node_with_stats("saturn:water_ice", {
 	description = "Water ice",

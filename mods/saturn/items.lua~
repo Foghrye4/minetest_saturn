@@ -38,14 +38,10 @@ local function register_wearable_item(registry_name, tool_definition, stats)
 	minetest.register_tool(registry_name, tool_definition)
 	saturn.set_item_stats(registry_name, stats)
 	if stats.is_market_item then
-		local _market_item_count = saturn.market_item_count + 1
-		saturn.market_items[_market_item_count] = registry_name
-		saturn.market_item_count = _market_item_count
+		table.insert(saturn.market_items,registry_name)
 	end
 	if stats.is_enemy_item then
-		local _enemy_item_count = saturn.enemy_item_count + 1
-		saturn.enemy_items[_enemy_item_count] = registry_name
-		saturn.enemy_item_count = _enemy_item_count
+		table.insert(saturn.enemy_items,registry_name)
 	end
 end
 
@@ -217,8 +213,8 @@ local retractor_on_use = function(stack, player, pointed_thing)
 						pos = object_pos,
 						velocity = {x=0, y=0, z=0},
 						acceleration = {x=0, y=0, z=0},
-						expirationtime = 0.1,
-						size = 6,
+						expirationtime = 1.0,
+						size = 16,
 						collisiondetection = false,
 						vertical = false,
 						texture = "saturn_green_halo.png"
@@ -237,8 +233,8 @@ local retractor_on_use = function(stack, player, pointed_thing)
 						pos = object_pos,
 						velocity = {x=0, y=0, z=0},
 						acceleration = {x=0, y=0, z=0},
-						expirationtime = 0.1,
-						size = 6,
+						expirationtime = 1.0,
+						size = 16,
 						collisiondetection = false,
 						vertical = false,
 						texture = "saturn_green_halo.png"
@@ -598,68 +594,6 @@ register_wearable_item("saturn:enemy_particle_emitter",{
 	possible_modifications = default_enemy_weapon_item_possible_modifications,
 })
 
--- Misc.
-
-register_wearable_item("saturn:enemy_hull_shard_a",{
-		description = "Enemy hull shard A",
-		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:1",
-		tool_capabilities = {
-		        max_drop_level = 0,
-		        groupcaps = {},
-    		},
-	},{
-	weight = 400,
-	volume = 10,
-	price = 100,
-	max_wear = 2000, -- out of 65535
-	is_enemy_item = true,
-})
-
-register_wearable_item("saturn:enemy_hull_shard_b",{
-		description = "Enemy hull shard B",
-		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:2",
-		tool_capabilities = {
-		        max_drop_level = 0,
-		        groupcaps = {},
-    		},
-	},{
-	weight = 500,
-	volume = 10,
-	price = 120,
-	max_wear = 2000, -- out of 65535
-	is_enemy_item = true,
-})
-
-register_wearable_item("saturn:enemy_hull_shard_c",{
-		description = "Enemy hull shard C",
-		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:3",
-		tool_capabilities = {
-		        max_drop_level = 0,
-		        groupcaps = {},
-    		},
-	},{
-	weight = 400,
-	volume = 10,
-	price = 100,
-	max_wear = 2000, -- out of 65535
-	is_enemy_item = true,
-})
-
-register_wearable_item("saturn:enemy_hull_shard_d",{
-		description = "Enemy hull shard D",
-		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:4",
-		tool_capabilities = {
-		        max_drop_level = 0,
-		        groupcaps = {},
-    		},
-	},{
-	weight = 400,
-	volume = 10,
-	price = 100,
-	max_wear = 2000, -- out of 65535
-	is_enemy_item = true,
-})
-
 minetest.register_chatcommand("give_enemy_item", {
 	params = "",
 	description = "Give to me random enemy item",
@@ -680,4 +614,102 @@ minetest.register_chatcommand("give_enemy_item", {
 			:format(stackstring, partiality)
 	end,
 })
+
+-- Craft items
+
+local function register_craft_item(registry_name, item_definition, stats)
+        item_definition.wield_image = "null.png"
+	item_definition.on_drop = function(itemstack, player, pos)
+		minetest.sound_play("saturn_item_drop", {to_player = player:get_player_name()})
+		saturn.throw_item(itemstack, player, pos)
+		itemstack:clear()
+		return itemstack
+	end
+	minetest.register_craftitem(registry_name, item_definition)
+	saturn.set_item_stats(registry_name, stats)
+	if stats.is_market_item then
+		table.insert(saturn.market_items,registry_name)
+	end
+	if stats.is_enemy_item then
+		table.insert(saturn.enemy_items,registry_name)
+	end
+	if stats.is_ore then
+		table.insert(saturn.ore_market_items, registry_name)
+	end
+end
+
+register_craft_item("saturn:enemy_hull_shard_a",{
+		description = "Enemy hull shard A",
+		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:1",
+	},{
+	weight = 400,
+	volume = 10,
+	price = 100,
+	max_wear = 2000, -- out of 65535
+	is_enemy_item = true,
+})
+
+register_craft_item("saturn:enemy_hull_shard_b",{
+		description = "Enemy hull shard B",
+		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:2",
+	},{
+	weight = 500,
+	volume = 10,
+	price = 120,
+	max_wear = 2000, -- out of 65535
+	is_enemy_item = true,
+})
+
+register_craft_item("saturn:enemy_hull_shard_c",{
+		description = "Enemy hull shard C",
+		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:3",
+	},{
+	weight = 400,
+	volume = 10,
+	price = 100,
+	max_wear = 2000, -- out of 65535
+	is_enemy_item = true,
+})
+
+register_craft_item("saturn:enemy_hull_shard_d",{
+		description = "Enemy hull shard D",
+		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:4",
+	},{
+	weight = 400,
+	volume = 10,
+	price = 100,
+	max_wear = 2000, -- out of 65535
+	is_enemy_item = true,
+})
+
+register_craft_item("saturn:clean_water",{
+		description = "Clean water",
+		inventory_image = "saturn_cells.png^[verticalframe:64:2",
+	},{
+	weight = 10,
+	volume = 0.01,
+	price = 1,
+	is_ore = true,
+})
+
+register_craft_item("saturn:heavy_water",{
+		description = "Heavy water",
+		inventory_image = "saturn_cells.png^[verticalframe:64:3",
+	},{
+	weight = 10,
+	volume = 0.01,
+	price = 10,
+	is_ore = true,
+})
+
+register_craft_item("saturn:silicate_mix",{
+		description = "Silicate mix",
+		inventory_image = "saturn_cells.png^[verticalframe:64:4",
+	},{
+	weight = 10,
+	volume = 0.01,
+	price = 1,
+	is_ore = true,
+})
+
 
