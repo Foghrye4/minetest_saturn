@@ -36,3 +36,7 @@ saturn.sign_of_number = function(a)
 		return 1
 	end
 end
+
+saturn.get_pseudogaussian_random = function(median, scale)
+	return math.tan(math.random()*math.pi/2)*scale+median
+end

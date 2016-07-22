@@ -22,7 +22,9 @@ local function register_node_with_stats(registry_name, node_definition, stats)
 		return itemstack
 	end
 	local t = node_definition.tiles
-	node_definition.tiles = {t,t,t,t,t,t}
+	if type(t) == "string" then
+		node_definition.tiles = {t,t,t,t,t,t}
+	end
 	node_definition.wield_image = "null.png"
         node_definition.sounds = {
             dig =  {name="saturn_retractor", gain=0.5},
@@ -55,6 +57,8 @@ register_node_with_stats("saturn:water_ice", {
 	price = 1.43,
 })
 
+table.insert(saturn.ore_market_items, "saturn:water_ice")
+
 register_node_with_stats("saturn:bauxite", {
 	description = "Bauxite",
 	tiles = "saturn_water_ice.png^saturn_bauxite.png",
@@ -66,6 +70,7 @@ register_node_with_stats("saturn:bauxite", {
 	price = 10,
 	noise_offset = -1.1,
 	is_ore = true,
+	destructible_by_weapons = true,
 })
 
 register_node_with_stats("saturn:ironnickel", {
@@ -104,5 +109,58 @@ register_node_with_stats("saturn:pitchblende", {
 	volume = 1,
 	price = 1000,
 	noise_offset = -1.5,
+	is_ore = true,
+})
+
+register_node_with_stats("saturn:nitrile_ice", { -- Give ammonia and various carboxylic acids with water
+	description = "Nitrile ice",
+	tiles = "saturn_nitrile_ice.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 690,
+	volume = 1,
+	price = 10,
+	noise_offset = -1.1,
+	is_ore = true,
+})
+
+register_node_with_stats("saturn:carbon_oxides_ice", { -- Give some water, carbon dioxide and some amorphic carbon
+	description = "Carbon oxides ice",
+	tiles = "saturn_carbon_oxides_ice.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 1500,
+	volume = 1,
+	price = 10,
+	noise_offset = -1.1,
+	is_ore = true,
+})
+
+register_node_with_stats("saturn:hydrogen_sulphide_ice", { -- Give some hydrogen sulphide and some sulphur
+	description = "Hydrogen sulphide ice",
+	tiles = "saturn_water_ice.png^saturn_hydrogen_sulphide_ice.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 1500,
+	volume = 1,
+	price = 10,
+	noise_offset = -1.1,
+	is_ore = true,
+})
+
+
+register_node_with_stats("saturn:phosphine_clathrate", { -- Give phosphine, orthophosphoric acid and water
+	description = "Phosphine clathrate",
+	tiles = "saturn_water_ice.png^saturn_phosphine_clathrate.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 1200,
+	volume = 1,
+	price = 60,
+	noise_offset = -1.2,
 	is_ore = true,
 })

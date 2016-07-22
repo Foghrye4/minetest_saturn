@@ -105,11 +105,21 @@ saturn.space_station_inv = minetest.create_detached_inventory("space_station", {
 	local add_money = saturn.get_item_price(stack:get_name()) * stack:get_count() * 0.7
 	saturn.players_info[player:get_player_name()]['money'] = saturn.players_info[player:get_player_name()]['money'] + add_money
 	saturn.space_station_inv:remove_item("buying_up_spot", stack)
-	minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, saturn.players_info[player:get_player_name()]['current_gui_tab']))
+	local tab = 1
+	if player:get_attach() then
+		local ship_lua = player:get_attach():get_luaentity()
+		tab = ship_lua['current_gui_tab']
+	end
+	minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab))
     end,
     on_take = function(inv, listname, index, stack, player)
 	saturn.players_info[player:get_player_name()]['money'] = saturn.players_info[player:get_player_name()]['money'] - saturn.get_item_price(stack:get_name()) * stack:get_count()
-	minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, saturn.players_info[player:get_player_name()]['current_gui_tab']))
+	local tab = 1
+	if player:get_attach() then
+		local ship_lua = player:get_attach():get_luaentity()
+		tab = ship_lua['current_gui_tab']
+	end
+	minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab))
     end,
 })
 
@@ -142,7 +152,10 @@ minetest.register_node("saturn:space_station_hatch", {
 	paramtype = "light",
 	paramtype2 = "wallmounted",
 	on_rightclick = function(pos, node, player)
-		saturn.players_info[player:get_player_name()]['current_gui_tab']=1
+		if player:get_attach() then
+			local ship_lua = player:get_attach():get_luaentity()
+			ship_lua['current_gui_tab']=1
+		end
 		minetest.show_formspec(
 			player:get_player_name(),
 			"saturn:space_station",
@@ -153,7 +166,7 @@ minetest.register_node("saturn:space_station_hatch", {
 
 local generate_random_market_item = function()
 	local item_name = saturn.market_items[math.random(#saturn.market_items)]
-	return ItemStack(item_name)
+	return ItemStack(item_name.." "..minetest.registered_items[item_name].stack_max)
 end
 
 local generate_random_ore_market_item = function()

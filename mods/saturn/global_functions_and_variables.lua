@@ -90,15 +90,26 @@ saturn.get_escape_pod = function()
 end
 
 saturn.release_delayed_power_and_try_to_shoot_again = function(ship_lua, amount, slot_number)
+	local stop_sound = true
 	local player = ship_lua.driver
 	ship_lua['recharging_equipment_power_consumption'] = ship_lua['recharging_equipment_power_consumption'] - amount
 	saturn.refresh_energy_hud(player)
-	if player:get_player_control().LMB and player:get_wield_index() == slot_number then
-		local item_stack = player:get_wielded_item()
-		if not item_stack:is_empty() then
-			local on_use = item_stack:get_definition().on_use
-			player:set_wielded_item(on_use(item_stack, player, nil))
+	if player:get_wield_index() == slot_number then
+		if player:get_player_control().LMB then
+			local item_stack = player:get_wielded_item()
+			if not item_stack:is_empty() then
+				local on_use = item_stack:get_definition().on_use
+				if on_use then
+					ship_lua['ignore_cooldown'] = true
+					player:set_wielded_item(on_use(item_stack, player, nil))
+					stop_sound = false
+				end
+			end
 		end
+	end
+	if stop_sound and ship_lua['weapon_sound_handler'] then
+		minetest.sound_stop(ship_lua['weapon_sound_handler'])
+		ship_lua['weapon_sound_handler'] = nil
 	end
 end
 
@@ -210,6 +221,37 @@ saturn.create_hit_effect = function(time, vel_range, object_pos)
 	end
 end
 
+saturn.create_gauss_hit_effect = function(time, _vel_range, object_pos)
+	minetest.add_particle({
+		pos = object_pos,
+		velocity = {x=0, y=0, z=0},
+		acceleration = {x=0, y=0, z=0},
+		expirationtime = 0.1,
+		size = 1,
+		collisiondetection = false,
+		vertical = false,
+		texture = "saturn_gauss_shot_particle.png"
+	})
+	local vel_range = 1
+	minetest.add_particlespawner({
+		amount = math.random(5)+1,
+		time = 0.3,
+		minpos = object_pos,
+		maxpos = object_pos,
+		minvel = {x=-vel_range, y=-vel_range, z=-vel_range},
+		maxvel = {x=vel_range, y=vel_range, z=vel_range},
+		minacc = {x=0, y=0, z=0},
+		maxacc = {x=0, y=0, z=0},
+		minexptime = 0.01,
+		maxexptime = 0.05,
+		minsize = 0.1,
+		maxsize = 0.5,
+		collisiondetection = false,
+		vertical = false,
+		texture = "saturn_incandescent_gradient.png^[verticalframe:16:"..math.random(4),
+	})
+end
+
 saturn.create_shooting_effect = function(shooter_pos, direction_to_target, shooter_size)
 	local x_pos = shooter_pos.x+direction_to_target.x*shooter_size
 	local y_pos = shooter_pos.y+direction_to_target.y*shooter_size
@@ -263,6 +305,29 @@ saturn.create_explosion_effect = function(explosion_pos)
 	end
 end
 
+saturn.create_node_explosion_effect = function(explosion_pos, node_name)
+	local node_def = minetest.registered_nodes[node_name]
+	local v_1 = vector.new(1,1,1)
+	local time = 0.2
+	minetest.add_particlespawner({
+		amount = 32,
+		time = time,
+		minpos = vector.subtract(explosion_pos, v_1),
+		maxpos = vector.add(explosion_pos, v_1),
+		minvel = {x=-10, y=-10, z=-10},
+		maxvel = {x=10, y=10, z=10},
+		minacc = {x=-1, y=-1, z=-1},
+		maxacc = {x=1, y=1, z=1},
+		minexptime = 0.1,
+		maxexptime = time,
+		minsize = 0.1,
+		maxsize = 1.0,
+		collisiondetection = true,
+		vertical = false,
+		texture = node_def.tiles[1],
+	})
+end
+
 saturn.punch_object = function(punched, puncher, damage)
 	if punched:is_player() and damage then
 		local inv = punched:get_inventory()
@@ -290,7 +355,7 @@ saturn.punch_object = function(punched, puncher, damage)
 			local name = punched:get_player_name()
 			local ship_lua = punched:get_attach():get_luaentity()
 			punched:set_inventory_formspec(saturn.get_player_inventory_formspec(punched,ship_lua['current_gui_tab']))
-			ship_lua.hit_effect_timer = 1.0
+			ship_lua.hit_effect_timer = 5.0
 			ship_lua.last_attacker = puncher
 
 		end
@@ -435,11 +500,12 @@ local throwable_item_entity={
 
 minetest.register_entity("saturn:throwable_item_entity", throwable_item_entity)
 
-local get_color_formspec_frame = function(x,y,w,h,color,thickness)
-	return "box["..(x-thickness)..","..(y-thickness)..";"..(w+thickness-0.2)..","..(thickness)..";"..color.."]"..
-"box["..(x+w-0.2)..","..(y-thickness)..";"..(thickness)..","..(h+thickness-0.2)..";"..color.."]"..
-"box["..x..","..(y+h-0.2)..";"..(w+thickness-0.2)..","..(thickness)..";"..color.."]"..
-"box["..(x-thickness)..","..y..";"..(thickness)..","..(h+thickness-0.2)..";"..color.."]"
+saturn.get_color_formspec_frame = function(x,y,w,h,color,thickness)
+	local gap = 0.2
+	return "box["..(x-thickness+gap)..","..(y-thickness)..";"..(w+thickness-0.2-gap*2)..","..(thickness)..";"..color.."]"..
+"box["..(x+w-0.2)..","..(y-thickness+gap)..";"..(thickness)..","..(h+thickness-0.2-gap*2)..";"..color.."]"..
+"box["..(x+gap)..","..(y+h-0.2)..";"..(w+thickness-0.2-gap*2)..","..(thickness)..";"..color.."]"..
+"box["..(x-thickness)..","..(y+gap)..";"..(thickness)..","..(h+thickness-0.2-gap*2)..";"..color.."]"
 end
 
 local get_formspec_label_with_bg_color = function(x,y,w,h,color,text)
@@ -500,9 +566,11 @@ saturn.get_ship_equipment_formspec = function(player)
 end
 
 saturn.get_main_inventory_formspec = function(player, vertical_offset)
-	local default_formspec = "list[current_player;main;0,"..vertical_offset..";8,1;]"..
-			"list[current_player;main;0,"..(vertical_offset+1.25)..";8,3;8]"..
-			saturn.default_slot_color
+    local default_formspec = "list[current_player;main;0,"..vertical_offset..";8,1;]"..
+		"list[current_player;main;0,"..(vertical_offset+1.25)..";8,3;8]"..
+		saturn.default_slot_color
+    if player then
+    local name = player:get_player_name()
 	for ix = 1, 8 do
 		for iy = 0, 3 do
 			if iy==0 then
@@ -512,7 +580,8 @@ saturn.get_main_inventory_formspec = function(player, vertical_offset)
 			end
 		end
 	end
-	return default_formspec
+    end
+    return default_formspec
 end
 
 saturn.get_player_inventory_formspec = function(player, tab)
@@ -642,10 +711,6 @@ saturn.get_item_price = function(item_name)
 	return 0
 end
 
-saturn.get_pseudogaussian_random = function(median, scale)
-	return math.tan(math.random()*math.pi/2)*scale+median
-end
-
 saturn.generate_random_enemy_item = function()
 	local item_name = saturn.enemy_items[math.random(#saturn.enemy_items)]
 	local item_stack = ItemStack(item_name)
@@ -685,6 +750,11 @@ minetest.register_globalstep(function(dtime)
     for _,player in ipairs(minetest.get_connected_players()) do
 	local player_inv = player:get_inventory()
 	local name = player:get_player_name()
+	local ship_obj = player:get_attach()
+	local ship_cooldown_mod = 0
+	if ship_obj and ship_obj:get_luaentity() then
+		ship_cooldown_mod = ship_obj:get_luaentity().total_modificators['cooldown'] or 0
+	end
 	for i=1,8 do
 	   local cooldown = saturn.hotbar_cooldown[name][i]
 	   if cooldown > 0 then
@@ -694,7 +764,7 @@ minetest.register_globalstep(function(dtime)
 			cooldown = 0
 		else
 			cooldown = cooldown - dtime
-			number = 44 * cooldown / saturn.get_item_stat(stack, 'cooldown', 88)
+			number = 44 * cooldown / math.max(0.2,saturn.get_item_stat(stack, 'cooldown', 88) + ship_cooldown_mod)
 		end
 		player:hud_change(saturn.hud_hotbar_cooldown[name][i], "number", number)
 		saturn.hotbar_cooldown[name][i] = cooldown

@@ -55,7 +55,10 @@ register_node_with_stats("saturn:water_ice", {
 	weight = 1000, --kg
 	volume = 1, --m3
 	price = 1.43,
+	destructible_by_weapons = true,
 })
+
+table.insert(saturn.ore_market_items, "saturn:water_ice")
 
 register_node_with_stats("saturn:bauxite", {
 	description = "Bauxite",
@@ -107,4 +110,61 @@ register_node_with_stats("saturn:pitchblende", {
 	price = 1000,
 	noise_offset = -1.5,
 	is_ore = true,
+})
+
+register_node_with_stats("saturn:nitrile_ice", { -- Give ammonia and various carboxylic acids with water
+	description = "Nitrile ice",
+	tiles = "saturn_nitrile_ice.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 690,
+	volume = 1,
+	price = 10,
+	noise_offset = -1.1,
+	is_ore = true,
+	destructible_by_weapons = true,
+})
+
+register_node_with_stats("saturn:carbon_oxides_ice", { -- Give some water, carbon dioxide and some amorphic carbon
+	description = "Carbon oxides ice",
+	tiles = "saturn_carbon_oxides_ice.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 1500,
+	volume = 1,
+	price = 10,
+	noise_offset = -1.1,
+	is_ore = true,
+	destructible_by_weapons = true,
+})
+
+register_node_with_stats("saturn:hydrogen_sulphide_ice", { -- Give some hydrogen sulphide and some sulphur
+	description = "Hydrogen sulphide ice",
+	tiles = "saturn_water_ice.png^saturn_hydrogen_sulphide_ice.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 1500,
+	volume = 1,
+	price = 10,
+	noise_offset = -1.1,
+	is_ore = true,
+	destructible_by_weapons = true,
+})
+
+
+register_node_with_stats("saturn:phosphine_clathrate", { -- Give phosphine, orthophosphoric acid and water
+	description = "Phosphine clathrate",
+	tiles = "saturn_water_ice.png^saturn_phosphine_clathrate.png",
+	groups = {cracky = 3},
+	legacy_mineral = true,
+	},{
+	weight = 1200,
+	volume = 1,
+	price = 60,
+	noise_offset = -1.2,
+	is_ore = true,
+	destructible_by_weapons = true,
 })

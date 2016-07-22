@@ -318,6 +318,10 @@ local hud_attack_info_frame_definition = {
 
 local attach_player_to_ship = function(player, ship_lua)
 	local name = player:get_player_name()
+	local old_attach = player:get_attach()
+	if old_attach then
+		old_attach:remove()
+	end
 	player:set_attach(ship_lua.object, "", {x=0,y=0,z=0}, {x=0,y=0,z=0})
 	ship_lua.driver = player
 	ship_lua.driver_name = player:get_player_name()
@@ -379,6 +383,11 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		end
 		minetest.sound_play("saturn_item_drop", {to_player = name})
 		inv:set_stack("ship_hull", 1, saturn:get_escape_pod())
+	elseif fields.quit then
+		if player:get_attach() then
+			local ship_lua = player:get_attach():get_luaentity()
+			ship_lua['is_node_gui_opened'] = false
+		end
 	else
 		for key,v in pairs(fields) do
 			local item_stack_location, match = string.gsub(key, "^item_info_", "")
@@ -424,10 +433,12 @@ local spaceship = {
 	driver_name = nil,
 	is_escape_pod = false,
 	engine_sound_handler = nil,
+	weapon_sound_handler = nil,
 	velocity = {x=0, y=0, z=0},
 	lastpos = {x=0, y=0, z=0},
 	last_attacker = nil,
 	age = 0,
+	one_second_timer = 0.0,
 	hit_effect_timer = 0,
 	weight = 65535,
 	volume = 0,
@@ -450,6 +461,7 @@ local spaceship = {
 	forcefield_modificators = {},
 	special_equipment_modificators = {},
 	current_gui_tab = 1,
+	ignore_cooldown = false,
 }
 
 function spaceship:on_step(dtime)
@@ -548,34 +560,38 @@ function spaceship:on_step(dtime)
 					}
 			self.object:setacceleration(acceleration)
 		end
+		local one_second_timer = self.one_second_timer + dtime
 		local inv = player:get_inventory()
-    		if is_engine_working and inv:get_size("engine") > 0 then
-			for listpos,stack in pairs(inv:get_list("engine")) do
-				if stack ~= nil then
-					local stats = saturn.get_item_stats(stack:get_name())
-					if stats then
-						if stats['traction'] and stats['rated_power'] then
-							stack:add_wear(saturn.MAX_ITEM_WEAR / stats['max_wear'])
-							inv:set_stack("engine", listpos, stack)
+		if one_second_timer > 1.0 then
+			one_second_timer = one_second_timer - 1.0
+	    		if is_engine_working and inv:get_size("engine") > 0 then
+				for listpos,stack in pairs(inv:get_list("engine")) do
+					if stack ~= nil then
+						local stats = saturn.get_item_stats(stack:get_name())
+						if stats then
+							if stats['traction'] and stats['rated_power'] then
+								stack:add_wear(saturn.MAX_ITEM_WEAR / stats['max_wear'])
+								inv:set_stack("engine", listpos, stack)
+							end
+						end
+					end
+				end
+			end
+	    		if inv:get_size("power_generator") > 0 then
+				for listpos,stack in pairs(inv:get_list("power_generator")) do
+					if stack ~= nil then
+						local stats = saturn.get_item_stats(stack:get_name())
+						if stats then
+							if stats['generated_power'] then
+								stack:add_wear(saturn.MAX_ITEM_WEAR / stats['max_wear'])
+								inv:set_stack("power_generator", listpos, stack)
+							end
 						end
 					end
 				end
 			end
 		end
-    		if is_engine_working and inv:get_size("power_generator") > 0 then
-			for listpos,stack in pairs(inv:get_list("power_generator")) do
-				if stack ~= nil then
-					local stats = saturn.get_item_stats(stack:get_name())
-					if stats then
-						if stats['generated_power'] then
-							stack:add_wear(saturn.MAX_ITEM_WEAR / stats['max_wear'])
-							inv:set_stack("power_generator", listpos, stack)
-						end
-					end
-				end
-			end
-		end
-
+		self.one_second_timer = one_second_timer
 		if is_engine_working and self.engine_sound_handler == nil then
 			local engine_sound_parameters = 
 			{
@@ -683,13 +699,14 @@ end)
 
 minetest.register_on_leaveplayer(function(player)
 	saturn:save_players()
-	local flb_pos = saturn.players_info[placer:get_player_name()]['forceload_pos']
+	local flb_pos = saturn.players_info[player:get_player_name()]['forceload_pos']
 	if flb_pos then
 		minetest.forceload_free_block(flb_pos)
 	end
 end)
 
 minetest.register_on_player_inventory_add_item(function(player, list_to, slot, stack)
+    if player:get_attach() then
 	local name = player:get_player_name()
 	local ship_lua = player:get_attach():get_luaentity()
 	local new_carried_weight = ship_lua['weight'] + saturn.get_item_weight(list_to, stack) * stack:get_count()
@@ -703,9 +720,11 @@ minetest.register_on_player_inventory_add_item(function(player, list_to, slot, s
 		saturn.throw_item(stack, player:get_attach(), player:getpos())
 		player:get_inventory():remove_item(list_to, stack)
 	end
+    end
 end)
 
 minetest.register_on_player_inventory_change_item(function(player, list_to, slot, old_item, new_item)
+    if player:get_attach() then
 	if old_item:get_name() ~= new_item:get_name() then
 		local name = player:get_player_name()
 		local ship_lua = player:get_attach():get_luaentity()
@@ -719,6 +738,7 @@ minetest.register_on_player_inventory_change_item(function(player, list_to, slot
 			player:get_inventory():remove_item(list_to, new_item)
 		end
 	end
+    end
 end)
 
 minetest.register_on_player_inventory_remove_item(function(player, list_from, stack)
