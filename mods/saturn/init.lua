@@ -1,4 +1,4 @@
--- Version 0.003
+-- Version 0.005
 -- Foghrye4
 saturn = rawget(_G, "saturn") or {}
 
@@ -10,12 +10,13 @@ minetest.setting_set("movement_gravity", 0)
 local modpath = minetest.get_modpath("saturn")
 
 dofile(modpath .. "/math_utils.lua")
+dofile(modpath .. "/localisation_and_units.lua")
 dofile(modpath .. "/global_functions_and_variables.lua")
 dofile(modpath .. "/nodes.lua")
 dofile(modpath .. "/microfactories.lua")
 dofile(modpath .. "/items.lua")
 dofile(modpath .. "/space_station.lua")
-dofile(modpath .. "/mapgen.lua")
 dofile(modpath .. "/player.lua")
 dofile(modpath .. "/enemy.lua")
+dofile(modpath .. "/mapgen.lua")
 

@@ -73,7 +73,7 @@ saturn.get_space_station_formspec = function(player, tab)
 		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
 		for ix = 1, 8 do
 			for iy = 0, 3 do
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+microfatory_market+"..(ix+8*iy)..";]"
+				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+microfactory_market+"..(ix+8*iy)..";]"
 			end
 		end
 	else
@@ -128,11 +128,52 @@ saturn.space_station_inv:set_size("ore_market", 8 * 4)
 saturn.space_station_inv:set_size("microfactory_market", 8 * 4)
 saturn.space_station_inv:set_size("buying_up_spot", 1)
 
+local box_slope = { --This 9 lines taken from "moreblocks" mod by Calinou and contributors without any changes. Source: https://github.com/kaeza/calinou_mods/tree/master/moreblocks
+	type = "fixed",
+	fixed = {
+		{-0.5,  -0.5,  -0.5, 0.5, -0.25, 0.5},
+		{-0.5, -0.25, -0.25, 0.5,     0, 0.5},
+		{-0.5,     0,     0, 0.5,  0.25, 0.5},
+		{-0.5,  0.25,  0.25, 0.5,   0.5, 0.5}
+	}
+}
+
 minetest.register_node("saturn:space_station_hull", {
 	description = "Space station hull",
 	tiles = {"saturn_space_station_hull.png"},
 	groups = {space_station = 1},
+	on_use = function(itemstack, user, pointed_thing)
+		if pointed_thing.type == "node" then
+			minetest.remove_node(pointed_thing.under)
+		end
+	end,
+	on_secondary_use = function(itemstack, user, pointed_thing)
+		minetest.add_node(vector.add(user:getpos(),user:get_look_dir()), {name=itemstack:get_name(), param1=0, param2=0})
+	end,
 })
+
+minetest.register_node("saturn:space_station_hull_slope", {
+	description = "Space station hull slope",
+	drawtype = "mesh",
+	mesh = "saturn_slope.obj",--This mesh taken from "moreblocks" mod by Calinou and contributors with small changes. Source: https://github.com/kaeza/calinou_mods/tree/master/moreblocks
+	tiles = {"saturn_space_station_hull.png"},
+	groups = {space_station = 1},
+	collision_box = box_slope,
+	paramtype = "light",
+	paramtype2 = "wallmounted",
+	on_use = function(itemstack, user, pointed_thing)
+		if pointed_thing.type == "node" then
+			local old_node = minetest.get_node(pointed_thing.under)
+			if old_node.param2 < 5 then
+				old_node.param2 = old_node.param2 + 1
+			else
+				old_node.param2 = 0
+			end
+			minetest.swap_node(pointed_thing.under, old_node)
+		end
+	end,
+})
+
 
 minetest.register_node("saturn:space_station_window", {
 	description = "Space station window",
@@ -140,17 +181,28 @@ minetest.register_node("saturn:space_station_window", {
 	groups = {space_station = 1},
 })
 
+minetest.register_node("saturn:space_station_gates", {
+	description = "Space station gates",
+	tiles = {"saturn_space_station_hull.png",
+		"saturn_space_station_gates.png",
+		"saturn_space_station_gates.png",
+		"saturn_space_station_gates.png",
+		"saturn_space_station_gates.png",
+		"saturn_space_station_gates.png",},
+	groups = {space_station = 1},
+})
+
+minetest.register_node("saturn:space_station_yellow_black_stripes", {
+	description = "Space station yellow black stripes",
+	tiles = {"saturn_space_station_yellow_black_stripes.png"},
+	groups = {space_station = 1},
+})
+
+
 minetest.register_node("saturn:space_station_hatch", {
 	description = "Space station hatch",
-	drawtype = "mesh",
-	mesh = "hatch.b3d",
-	tiles = {
-		"saturn_space_station_hatch.png", 
-		"saturn_space_station_hull.png"
-		},
+	tiles = {"saturn_space_station_hatch.png"},
 	groups = {space_station = 1},
-	paramtype = "light",
-	paramtype2 = "wallmounted",
 	on_rightclick = function(pos, node, player)
 		if player:get_attach() then
 			local ship_lua = player:get_attach():get_luaentity()
@@ -205,3 +257,25 @@ saturn.update_space_station_market = update_space_station_market
 for i=0, 8*4 do
 	update_space_station_market()
 end
+
+minetest.register_chatcommand("create_schematic", {
+	params = "filename pos1 pos2",
+	description = "Create schematic",
+	privs = {server = true},
+	func = function(name, param)
+		local params_list = string.split(param, " ", false, -1, false)
+		minetest.create_schematic(minetest.string_to_pos(params_list[2]), minetest.string_to_pos(params_list[3]), {}, minetest.get_modpath("saturn").."/schematics/"..params_list[1])
+		return true, "schematic created"
+	end,
+})
+
+minetest.register_chatcommand("place_schematic", {
+	params = "filename pos1",
+	description = "Create schematic",
+	privs = {server = true},
+	func = function(name, param)
+		local params_list = string.split(param, " ", false, -1, false)
+		minetest.place_schematic(minetest.string_to_pos(params_list[2]), minetest.get_modpath("saturn").."/schematics/"..params_list[1], 0, {}, true)
+		return true, "schematic placed"
+	end,
+})

@@ -22,7 +22,7 @@ minetest.register_ore({
 	clust_num_ores = 30,
 	clust_size     = 16,
 	height_min     = -14000,
-	height_max     = 100,
+	height_max     = 800,
         noise_threshold = 0.5,
         noise_params = {offset=0, scale=1, spread={x=100, y=100, z=100}, seed=23, octaves=3, persist=0.70},
 	column_height_max = 1,
@@ -35,7 +35,7 @@ minetest.register_ore({
 	clust_scarcity   = 24*24*24,
 	clust_size       = 35,
 	y_min            = -14900,
-	y_max            = 100,
+	y_max            = 800,
 	noise_threshold = 0,
 	noise_params     = {
 		offset=-0.75,
@@ -54,7 +54,7 @@ minetest.register_ore({
 	clust_scarcity   = 24*24*24,
 	clust_size       = 10,
 	y_min            = -15000,
-	y_max            = 200,
+	y_max            = 1000,
 	noise_threshold = 0,
 	noise_params     = {
 		offset=-0.75,
@@ -76,7 +76,7 @@ for ore_name,stats in pairs(saturn.ores) do
 	clust_scarcity   = 24*24*24,
 	clust_size       = 35,
 	y_min            = -14900,
-	y_max            = 100,
+	y_max            = 1000,
 	noise_threshold = 0,
 	noise_params     = {
 		offset=stats['noise_offset'],
@@ -93,13 +93,10 @@ end
 local ss_x = saturn.space_station_pos.x
 local ss_y = saturn.space_station_pos.y
 local ss_z = saturn.space_station_pos.z
-local ss_min_coord = -128 -- Space station minimal coordinate
-local ss_max_coord = 128-- Space station maximal coordinate
-local ss_sphere_sqr = 4096 -- Space station inner sphere squared radius
-local ss_hatches_console_sqr = 13456 -- Space station inner sphere squared radius
-local hull = minetest.get_content_id("saturn:space_station_hull")
-local window = minetest.get_content_id("saturn:space_station_window")
-local hatch = minetest.get_content_id("saturn:space_station_hatch")
+
+local ess_x = saturn.enemy_space_station.x
+local ess_y = saturn.enemy_space_station.y
+local ess_z = saturn.enemy_space_station.z
 
 minetest.register_on_generated(function(minp, maxp, seed)
 	local minp_x = minp.x
@@ -108,104 +105,19 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	local maxp_x = maxp.x
 	local maxp_y = maxp.y
 	local maxp_z = maxp.z
-	if maxp_x >= ss_min_coord  + ss_x and 
-	maxp_y >= ss_min_coord + ss_y and 
-	maxp_z >= ss_min_coord + ss_z and 
-	minp_x <= ss_max_coord + ss_x and 
-	minp_y <= ss_max_coord + ss_y and 
-	minp_z <= ss_max_coord + ss_z then
-		local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
-		local data = vm:get_data()
-		local area = VoxelArea:new{MinEdge=emin, MaxEdge=emax}
-		local param2_data = vm:get_param2_data()
-		for z = minp_z, maxp_z do
-     		 	for y = minp_y, maxp_y do
-       		 	 	for x = minp_x, maxp_x do
-					local p_pos = area:index(x, y, z)
-					local x1 = x - ss_x
-					local y1 = y - ss_y
-					local z1 = z - ss_z
-					local sq_r = x1*x1+y1*y1+z1*z1
-					if sq_r<ss_sphere_sqr then
-						if (y1 + 2) % 4 == 0 and 
-						math.floor(x1 / 5 - 0.5) % 2 ==0 and
-						math.floor(z1 / 5 - 0.5) % 2 ==0 then
-							data[p_pos] = window
-						else
-							data[p_pos] = hull
-						end
-					else
-						if z1 * z1 <= ss_hatches_console_sqr  and 
-						y1 * y1 <= ss_hatches_console_sqr and 
-						x1 * x1 <= ss_hatches_console_sqr then
-							if (x1 * x1 <= 4 and y1 * y1 <= 4) or
-							(x1 * x1 <= 4 and z1 * z1 <= 4) or
-							(z1 * z1 <= 4 and y1 * y1 <= 4) then
-								data[p_pos] = hull
-							else
-								if z1 % 16 == 0 and z1 * z1 > ss_sphere_sqr + 16 then
-									if x1 * x1 == 9 and y1 == 0 then
-										data[p_pos] = hatch
-										if x1 > 0 then
-											param2_data[p_pos] = 2
-										else
-											param2_data[p_pos] = 3
-										end
-									end
-									if y1 * y1 == 9 and x1 == 0 then
-										data[p_pos] = hatch
-										if y1 > 0 then
-											param2_data[p_pos] = 0
-										else
-											param2_data[p_pos] = 1
-										end
-									end
-								end
-								if y1 % 16 == 0 and y1 * y1 > ss_sphere_sqr + 16 then
-									if x1 * x1 == 9 and z1 == 0 then
-										data[p_pos] = hatch
-										if x1 > 0 then
-											param2_data[p_pos] = 2
-										else
-											param2_data[p_pos] = 3
-										end
-									end
-									if z1 * z1 == 9 and x1 == 0 then
-										data[p_pos] = hatch
-										if z1 > 0 then
-											param2_data[p_pos] = 4
-										else
-											param2_data[p_pos] = 5
-										end
-									end
-								end
-								if x1 % 16 == 0 and x1 * x1 > ss_sphere_sqr + 16 then
-									if z1 * z1 == 9 and y1 == 0 then
-										data[p_pos] = hatch
-										if z1 > 0 then
-											param2_data[p_pos] = 4
-										else
-											param2_data[p_pos] = 5
-										end
-									end
-									if y1 * y1 == 9 and z1 == 0 then
-										data[p_pos] = hatch
-										if y1 > 0 then
-											param2_data[p_pos] = 0
-										else
-											param2_data[p_pos] = 1
-										end
-									end
-								end
-							end
-						end
-			   		end
-				end
-      		   	end
-   	   	end
-		vm:set_data(data)
-		vm:set_param2_data(param2_data)
-		vm:write_to_map()
-		vm:calc_lighting()
+	if maxp_x >= ss_x and 
+	maxp_y >= ss_y and 
+	maxp_z >= ss_z and 
+	minp_x < ss_x and 
+	minp_y < ss_y and 
+	minp_z < ss_z then
+		minetest.place_schematic(saturn.space_station_pos, minetest.get_modpath("saturn").."/schematics/human_space_station.mts", 0, {}, true)
+	elseif maxp_x >= ess_x and 
+	maxp_y >= ess_y and 
+	maxp_z >= ess_z and 
+	minp_x < ess_x and 
+	minp_y < ess_y and 
+	minp_z < ess_z then
+		minetest.place_schematic(saturn.enemy_space_station, minetest.get_modpath("saturn").."/schematics/enemy_mothership.mts", 0, {}, true)
 	end
 end)

@@ -16,7 +16,7 @@ local function define_player_inventory_slots(player, start_hull)
     local engine_slots = hull_stats.engine_slots
     local power_generator_slots  = hull_stats.power_generator_slots
     local droid_slots = hull_stats.droid_slots
-    local scaner_slots = hull_stats.scaner_slots
+    local radar_slots = hull_stats.radar_slots
     local forcefield_generator_slots = hull_stats.forcefield_generator_slots
     local special_equipment_slots = hull_stats.special_equipment_slots
     player_inv:set_size("ship_hull", 1)
@@ -24,13 +24,13 @@ local function define_player_inventory_slots(player, start_hull)
     remove_unfitted_items_to_hold(player_inv, "engine", engine_slots)
     remove_unfitted_items_to_hold(player_inv, "power_generator", power_generator_slots)
     remove_unfitted_items_to_hold(player_inv, "droid", droid_slots)
-    remove_unfitted_items_to_hold(player_inv, "scaner", scaner_slots)
+    remove_unfitted_items_to_hold(player_inv, "radar", radar_slots)
     remove_unfitted_items_to_hold(player_inv, "forcefield_generator", forcefield_generator_slots)
     remove_unfitted_items_to_hold(player_inv, "special_equipment", special_equipment_slots)
     player_inv:set_size("engine", engine_slots)
     player_inv:set_size("power_generator", power_generator_slots)
     player_inv:set_size("droid", droid_slots)
-    player_inv:set_size("scaner", scaner_slots)
+    player_inv:set_size("radar", radar_slots)
     player_inv:set_size("forcefield_generator", forcefield_generator_slots)
     player_inv:set_size("special_equipment", special_equipment_slots)
 end
@@ -98,7 +98,7 @@ local function apply_modificators(ship_lua)
 	for modificator_key,value in pairs(ship_lua.droid_modificators) do
 		apply_modificator_to_ship_safe(ship_lua, modificator_key, value)
 	end
-	for modificator_key,value in pairs(ship_lua.scaner_modificators) do
+	for modificator_key,value in pairs(ship_lua.radar_modificators) do
 		apply_modificator_to_ship_safe(ship_lua, modificator_key, value)
 	end
 	for modificator_key,value in pairs(ship_lua.forcefield_modificators) do
@@ -123,7 +123,7 @@ local function refresh_hull(player)
 			stats['engine_slots'] and
 			stats['power_generator_slots'] and
 			stats['droid_slots'] and
-			stats['scaner_slots'] and
+			stats['radar_slots'] and
 			stats['forcefield_generator_slots'] and
 			stats['special_equipment_slots'] then
 				ship_lua['free_space'] = stats['free_space']
@@ -151,7 +151,7 @@ local function refresh_traction(player)
     local engine_consumed_power = 0 
     if player:get_inventory():get_size("engine") > 0 then
 	for listpos,stack in pairs(player:get_inventory():get_list("engine")) do
-		if stack ~= nil then
+		if stack ~= nil and not stack:is_empty() then
 			local stats = saturn.get_item_stats(stack:get_name())
 			if stats then
 				if stats['traction'] and stats['rated_power'] then
@@ -179,13 +179,83 @@ local function refresh_traction(player)
     ship_lua['engine_consumed_power']=engine_consumed_power
 end
 
+local function refresh_forcefield(player)
+    local ship_lua = player:get_attach():get_luaentity()
+    ship_lua.forcefield_modificators = {}
+    local forcefield_protection = 0 
+    local forcefield_consumed_power = 0 
+    if player:get_inventory():get_size("forcefield_generator") > 0 then
+	for listpos,stack in pairs(player:get_inventory():get_list("forcefield_generator")) do
+		if stack ~= nil and not stack:is_empty() then
+			local stats = saturn.get_item_stats(stack:get_name())
+			if stats then
+				if stats['forcefield_protection'] and stats['rated_power'] then
+					forcefield_protection = forcefield_protection + stats['forcefield_protection']
+					forcefield_consumed_power = forcefield_consumed_power + stats['rated_power']
+					local metadata = minetest.deserialize(stack:get_metadata())
+					if metadata then
+						if metadata['rated_power'] then
+							forcefield_consumed_power = forcefield_consumed_power + metadata['rated_power']
+						end
+						for modificator_key,value in pairs(metadata) do
+							if ship_lua.forcefield_modificators[modificator_key] then
+								ship_lua.forcefield_modificators[modificator_key] = forcefield_modificators[modificator_key] + value
+							else
+								ship_lua.forcefield_modificators[modificator_key] = value
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+    end
+    ship_lua['forcefield_protection']=forcefield_protection
+    ship_lua['forcefield_generator_consumed_power']=forcefield_consumed_power
+end
+
+local function refresh_radar(player)
+    local ship_lua = player:get_attach():get_luaentity()
+    ship_lua.radar_modificators = {}
+    local radar_range = 0
+    local radar_consumed_power = 0
+    if player:get_inventory():get_size("radar") > 0 then
+	for listpos,stack in pairs(player:get_inventory():get_list("radar")) do
+		if stack ~= nil and not stack:is_empty() then
+			local stats = saturn.get_item_stats(stack:get_name())
+			if stats then
+				if stats['radar_range'] and stats['rated_power'] then
+					radar_range = math.max(radar_range, stats['radar_range'])
+					radar_consumed_power = radar_consumed_power + stats['rated_power']
+					local metadata = minetest.deserialize(stack:get_metadata())
+					if metadata then
+						if metadata['rated_power'] then
+							radar_consumed_power = radar_consumed_power + metadata['rated_power']
+						end
+						for modificator_key,value in pairs(metadata) do
+							if ship_lua.radar_modificators[modificator_key] then
+								ship_lua.radar_modificators[modificator_key] = radar_modificators[modificator_key] + value
+							else
+								ship_lua.radar_modificators[modificator_key] = value
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+    end
+    ship_lua['radar_range']=radar_range
+    ship_lua['radar_consumed_power']=radar_consumed_power
+end
+
 local function refresh_power(player)
      local ship_lua = player:get_attach():get_luaentity()
      ship_lua.power_generator_modificators = {}
      local generated_power = 0
      if player:get_inventory():get_size("power_generator") > 0 then
 	for listpos,stack in pairs(player:get_inventory():get_list("power_generator")) do
-		if stack ~= nil then
+		if stack ~= nil and not stack:is_empty() then
 			local stats = saturn.get_item_stats(stack:get_name())
 			if stats then
 				if stats['generated_power'] then
@@ -209,14 +279,21 @@ local function refresh_power(player)
 end
 
 local refresh_ship_equipment = function(player, list_to)
+	saturn.radars[player:get_player_name()] = nil
 	if list_to == "ship_hull" or list_to == "any" then
 		refresh_hull(player)
 	end
 	if list_to == "power_generator" or list_to == "any" then
 		refresh_power(player)
 	end
+	if list_to == "forcefield_generator" or list_to == "any" then
+		refresh_forcefield(player)
+	end
 	if list_to == "engine" or list_to == "any" then
 		refresh_traction(player)
+	end
+	if list_to == "radar" or list_to == "any" then
+		refresh_radar(player)
 	end
 	local ship_lua = player:get_attach():get_luaentity()
 	apply_modificators(ship_lua)
@@ -224,12 +301,15 @@ local refresh_ship_equipment = function(player, list_to)
 	if ship_lua.total_modificators['generated_power'] then
 		generated_power_bonus = ship_lua.total_modificators['generated_power']
 	end
-	ship_lua['free_power'] = ship_lua['generated_power'] + generated_power_bonus - ship_lua['engine_consumed_power'] - ship_lua['droid_consumed_power'] - ship_lua['scaner_consumed_power'] - ship_lua['forcefield_generator_consumed_power'] - ship_lua['special_equipment_consumed_power']
+	ship_lua['free_power'] = ship_lua['generated_power'] + generated_power_bonus - ship_lua['engine_consumed_power'] - ship_lua['droid_consumed_power'] - ship_lua['radar_consumed_power'] - ship_lua['forcefield_generator_consumed_power'] - ship_lua['special_equipment_consumed_power']
+    	if ship_lua['free_power'] > 0 and ship_lua['radar_range'] > 0 then
+	    saturn.radars[player:get_player_name()] = {obj = player:get_attach(), radius = ship_lua['radar_range'] + (ship_lua.total_modificators['radar_range'] or 0)}
+	end
 	player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
 end
 
 local hud_health_energy_bar_frame_definition = {
-		hud_elem_type = "statbar",
+		hud_elem_type = "image",
 		position = { x=0.5, y=1 },
 		size = { x=320, y=18},
 		text = "saturn_hud_bar_frames.png",
@@ -314,6 +394,30 @@ local hud_attack_info_frame_definition = {
 		alignment = {x=0,y=0},
 		offset = {x=0, y=0},
 	}
+
+local hud_radar_shelf = {}
+local hud_radar_text = {}
+
+for i=1,8 do
+	hud_radar_shelf[i] = {
+		hud_elem_type = "image",
+		scale = { x=2, y=2 }, 
+		position = { x=0.5, y=0.5 },
+		text = "null.png",
+		number = 0xFF0000,
+		alignment = {x=0,y=0},
+		offset = {x=0, y=0},
+	}
+	hud_radar_text[i] = {
+		hud_elem_type = "text",
+		scale = { x=2, y=2 }, 
+		position = { x=0.5, y=0.5 },
+		text = "",
+		number = 0xFF8A00,
+		alignment = {x=0,y=0},
+		offset = {x=0, y=0},
+	}
+end
 
 
 local attach_player_to_ship = function(player, ship_lua)
@@ -437,6 +541,8 @@ local spaceship = {
 	velocity = {x=0, y=0, z=0},
 	lastpos = {x=0, y=0, z=0},
 	last_attacker = nil,
+	radar_object_list = {},
+	radar_object_state = {},
 	age = 0,
 	one_second_timer = 0.0,
 	hit_effect_timer = 0,
@@ -444,12 +550,14 @@ local spaceship = {
 	volume = 0,
 	free_space = 0,
 	traction = 0,
+	radar_range = 0,
+	forcefield_protection = 0,
 	generated_power = 0,
 	free_power = 65535,
 	recharging_equipment_power_consumption = 0,
 	engine_consumed_power = 0,
 	droid_consumed_power = 0,
-	scaner_consumed_power = 0,
+	radar_consumed_power = 0,
 	forcefield_generator_consumed_power = 0,
 	special_equipment_consumed_power = 0,
 	total_modificators = {},
@@ -457,7 +565,7 @@ local spaceship = {
 	engine_modificators = {},
 	power_generator_modificators = {},
 	droid_modificators = {},
-	scaner_modificators = {},
+	radar_modificators = {},
 	forcefield_modificators = {},
 	special_equipment_modificators = {},
 	current_gui_tab = 1,
@@ -469,6 +577,7 @@ function spaceship:on_step(dtime)
 	if self.driver and self.driver:get_look_dir() then
 		local player = self.driver
 		local name = player:get_player_name()
+		local pos = self.object:getpos()
 		local controls=player:get_player_control() --{jump=bool,right=bool,left=bool,LMB=bool,RMB=bool,sneak=bool,aux1=bool,down=bool,up=bool}
 		local is_player_has_nothing_in_hand = player:get_wielded_item():is_empty()
 		local forward_acceleration=0
@@ -483,12 +592,12 @@ function spaceship:on_step(dtime)
 		if self['weight'] > 0 and self['free_power']>=0 then
 			acceleration_module = traction/self['weight']
 		end
-		local brake = false
 		local look_dir=player:get_look_dir()
 		local look_x=look_dir.x
 		local look_y=look_dir.y
 		local look_z=look_dir.z
 		local look_yaw = player:get_look_yaw()
+		local look_pitch = player:get_look_pitch()
 		local velocity = self.object:getvelocity()
 		local velocity_module = vector.length(velocity)
 		local is_engine_working = false
@@ -531,34 +640,74 @@ function spaceship:on_step(dtime)
 				is_engine_working = true
 				forward_acceleration=-acceleration_module
 			end
-			local het = self.hit_effect_timer
-			if het > 0 then
-				self.hit_effect_timer = het - dtime
-				if het - dtime <= 0 then
-					player:hud_change(saturn.hud_attack_info_frame_id, "text", "null.png")
-					player:hud_change(saturn.hud_attack_info_text_id, "text", "")
-				else
-					if self.last_attacker then
-						if self.last_attacker:getpos() then
-							local lahd = saturn.get_onscreen_coords_of_object(player, self.last_attacker)
-							player:hud_change(saturn.hud_attack_info_frame_id, "position", lahd)
-							player:hud_change(saturn.hud_attack_info_frame_id, "text", "saturn_arrows_and_frame.png^[verticalframe:9:"..lahd.frame)
-							player:hud_change(saturn.hud_attack_info_text_id, "text", "Attack is detected!")
-							local color = 0xFF0000
-							if het % 0.5 - 0.25 < 0 then
-								color = 0xFFAA00
-							end
-							player:hud_change(saturn.hud_attack_info_text_id, "number", color)
+			local acceleration={
+						x=look_x*forward_acceleration+math.sin(look_yaw)*side_acceleration-look_y*math.cos(look_yaw)*level_acceleration,
+						y=look_y*forward_acceleration+(look_x*look_x+look_z*look_z)*level_acceleration,
+						z=look_z*forward_acceleration-math.cos(look_yaw)*side_acceleration-look_y*math.sin(look_yaw)*level_acceleration
+					}
+			self.object:setacceleration(acceleration)
+		end
+		local het = self.hit_effect_timer
+		if het > 0 then
+			self.hit_effect_timer = het - dtime
+			if het - dtime <= 0 then
+				player:hud_change(saturn.hud_attack_info_frame_id, "text", "null.png")
+				player:hud_change(saturn.hud_attack_info_text_id, "text", "")
+			else
+				if self.last_attacker then
+					if self.last_attacker:getpos() then
+						local lahd = saturn.get_onscreen_coords_of_object(player, self.last_attacker)
+						player:hud_change(saturn.hud_attack_info_frame_id, "position", lahd)
+						player:hud_change(saturn.hud_attack_info_frame_id, "text", "saturn_arrows_and_frame.png^[verticalframe:9:"..lahd.frame)
+						player:hud_change(saturn.hud_attack_info_text_id, "text", "Attack is detected!")
+						local color = 0xFF0000
+						if het % 0.5 - 0.25 < 0 then
+							color = 0xFFAA00
 						end
+						player:hud_change(saturn.hud_attack_info_text_id, "number", color)
 					end
 				end
 			end
-			local acceleration={
-						x=look_x*forward_acceleration+look_z*side_acceleration-look_y*math.cos(look_yaw)*level_acceleration,
-						y=look_y*forward_acceleration+(look_x*look_x+look_z*look_z)*level_acceleration,
-						z=look_z*forward_acceleration-look_x*side_acceleration-look_y*math.sin(look_yaw)*level_acceleration
-					}
-			self.object:setacceleration(acceleration)
+		end
+		local rol = self.radar_object_list
+		if #rol > 0 then
+			if saturn.radars[name] then
+				for i=1,8 do
+					local clear_hud = false
+					local ro = rol[i]
+					if ro then
+					    local radar_range = saturn.radars[name].radius
+					    if ro.x > pos.x - radar_range and
+							ro.x < pos.x + radar_range and
+							ro.y > pos.y - radar_range and
+							ro.y < pos.y + radar_range and
+							ro.z > pos.z - radar_range and
+							ro.z < pos.z + radar_range then
+						local ocodo = saturn.get_onscreen_coords_of_object(player, rol[i])
+						if ocodo.frame == 0 then
+							player:hud_change(saturn.hud_radar_shelf[i], "position", ocodo)
+							player:hud_change(saturn.hud_radar_shelf[i], "text", "saturn_radar_mark.png")
+							player:hud_change(saturn.hud_radar_text[i], "position", ocodo)
+							player:hud_change(saturn.hud_radar_text[i], "text", string.format("%4.1f",vector.distance(pos,rol[i])/1000).."km")
+						else 
+							clear_hud = true
+						end
+					    else
+						self.radar_object_state[ro] = nil
+						table.remove(rol,i)
+						clear_hud = true
+					    end
+					else
+						clear_hud = true
+					end
+					if clear_hud then
+						player:hud_change(saturn.hud_radar_shelf[i], "text", "null.png")
+						player:hud_change(saturn.hud_radar_text[i], "text", "")
+					end
+				end
+			else
+				self.radar_object_list = {}
+			end
 		end
 		local one_second_timer = self.one_second_timer + dtime
 		local inv = player:get_inventory()
@@ -590,6 +739,19 @@ function spaceship:on_step(dtime)
 					end
 				end
 			end
+	    		if inv:get_size("radar") > 0 then
+				for listpos,stack in pairs(inv:get_list("radar")) do
+					if stack ~= nil then
+						local stats = saturn.get_item_stats(stack:get_name())
+						if stats then
+							if stats['radar_range'] then
+								stack:add_wear(saturn.MAX_ITEM_WEAR / stats['max_wear'])
+								inv:set_stack("radar", listpos, stack)
+							end
+						end
+					end
+				end
+			end
 		end
 		self.one_second_timer = one_second_timer
 		if is_engine_working and self.engine_sound_handler == nil then
@@ -608,7 +770,6 @@ function spaceship:on_step(dtime)
 		end
 		player:hud_change(saturn.hud_relative_velocity_id, "text", "Relative to ring velocity: "..string.format ('%4.2f',velocity_module).." m/s")
 		player:set_bone_position("Head", {x=0,y=1,z=0}, {x=player:get_look_pitch()*180/3.14159,y=0,z=90-look_yaw*180/3.14159})
-		local pos = self.object:getpos()
 		local node = minetest.env:get_node(pos)
 		if self.lastpos.x~=nil then
 			if node.name ~= "air" and node.name ~= "saturn:fog" and node.name ~= "ignore" then
@@ -627,6 +788,12 @@ function spaceship:on_step(dtime)
 			end
 		end
 		self.lastpos={x=pos.x, y=pos.y, z=pos.z}
+		if pos.y > saturn.player_pos_y_max_reached + 1 then
+			saturn.player_ship_ref = self.object
+			saturn.player_pos_y_max_reached = pos.y
+		elseif pos.y < 400 and self.object == saturn.player_ship_ref then
+			saturn.player_ship_ref = nil
+		end
 	elseif self.driver_name and self.driver_name ~= "" then
 		local player = minetest.get_player_by_name(self.driver_name)
 		if player then
@@ -687,6 +854,10 @@ minetest.register_on_joinplayer(function(player)
 	for i=1,8 do
 		saturn.hud_hotbar_cooldown[name][i] = player:hud_add(hud_hotbar_cooldown[i])
 	end
+	for i=1,8 do
+		saturn.hud_radar_shelf[i] = player:hud_add(hud_radar_shelf[i])
+		saturn.hud_radar_text[i] = player:hud_add(hud_radar_text[i])
+	end
 	if saturn.players_info[name] == nil then
 		create_new_player(player)
 	end
@@ -702,6 +873,9 @@ minetest.register_on_leaveplayer(function(player)
 	local flb_pos = saturn.players_info[player:get_player_name()]['forceload_pos']
 	if flb_pos then
 		minetest.forceload_free_block(flb_pos)
+	end
+	if player:get_attach() and player:get_attach() == saturn.player_ship_ref then
+		saturn.player_ship_ref = nil
 	end
 end)
 
@@ -763,4 +937,53 @@ minetest.register_item(":", {
 		groupcaps = {},
 		damage_groups = {},
 	}
+})
+
+minetest.register_chatcommand("saturn_tpme", {
+	params = "pos",
+	description = "teleport to destination",
+	privs = {server = true},
+	func = function(name, param)
+		local player = minetest.get_player_by_name(name)
+		local ship = player:get_attach()
+		local pos = minetest.string_to_pos(param)
+		if ship then
+			ship:moveto(pos,false)
+		end
+		player:moveto(pos,false)
+		return true, "teleported"
+	end,
+})
+
+minetest.register_chatcommand("saturn_tpme_rel", {
+	params = "pos",
+	description = "teleport destination relatively",
+	privs = {server = true},
+	func = function(name, param)
+		local player = minetest.get_player_by_name(name)
+		local ship = player:get_attach()
+		local pos = minetest.string_to_pos(param)
+		local ppos = player:getpos() 
+		pos = vector.add(ppos,pos)
+		if ship then
+			ship:moveto(pos,false)
+		end
+		player:moveto(pos,false)
+		return true, "teleported"
+	end,
+})
+
+minetest.register_chatcommand("saturn_tpme_to_enemy", {
+	params = "",
+	description = "teleport to enemy base",
+	privs = {server = true},
+	func = function(name, param)
+		local player = minetest.get_player_by_name(name)
+		local ship = player:get_attach()
+		if ship then
+			ship:moveto(saturn.enemy_space_station,false)
+		end
+		player:moveto(saturn.enemy_space_station,false)
+		return true, "teleported"
+	end,
 })

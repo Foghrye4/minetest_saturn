@@ -1,3 +1,5 @@
+saturn.max_loot_level = 10
+
 local default_enemy_item_possible_modifications = {
 		weight = {-10,10}, -- Given values define a scale of pseudogaussian random value
 		volume = {-1,1},
@@ -6,6 +8,7 @@ local default_enemy_item_possible_modifications = {
 		damage = {-1,1},
 		cooldown = {-0.1,0.1},
 		generated_power = {-10,10},
+		forcefield_protection = {-0.1,0.1},
 	}
 
 local default_enemy_generator_item_possible_modifications = {
@@ -15,6 +18,7 @@ local default_enemy_generator_item_possible_modifications = {
 		damage = {-1,1},
 		cooldown = {-0.1,0.1},
 		generated_power = {-10,10},
+		forcefield_protection = {-0.1,0.1},
 	}
 
 
@@ -26,22 +30,27 @@ local default_enemy_weapon_item_possible_modifications = {
 		cooldown = {-0.1,0.1},
 	}
 
-local function register_wearable_item(registry_name, tool_definition, stats)
-        tool_definition.wield_image = "null.png"
-        tool_definition.stack_max = 1
-	tool_definition.on_drop = function(itemstack, player, pos)
+local function register_wearable_item(registry_name, def)
+        def.wield_image = "null.png"
+        def.stack_max = 1
+	def.on_drop = function(itemstack, player, pos)
 		minetest.sound_play("saturn_item_drop", {to_player = player:get_player_name()})
 		saturn.throw_item(itemstack, player, pos)
 		itemstack:clear()
 		return itemstack
 	end
-	minetest.register_tool(registry_name, tool_definition)
-	saturn.set_item_stats(registry_name, stats)
-	if stats.is_market_item then
+	minetest.register_tool(registry_name, def)
+	if def.is_market_item then
 		table.insert(saturn.market_items,registry_name)
 	end
-	if stats.is_enemy_item then
+	if def.is_enemy_item then
 		table.insert(saturn.enemy_items,registry_name)
+		for level = def.loot_level,saturn.max_loot_level do
+			if not saturn.enemy_items_by_level[level] then
+				saturn.enemy_items_by_level[level] = {}
+			end
+			table.insert(saturn.enemy_items_by_level[level],registry_name)
+		end
 	end
 end
 
@@ -54,7 +63,6 @@ register_wearable_item("saturn:basic_ship_hull",{
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 40000,
 	volume = 400,
 	free_space = 100,
@@ -63,7 +71,7 @@ register_wearable_item("saturn:basic_ship_hull",{
 	engine_slots = 1,
 	power_generator_slots = 1,
 	droid_slots = 0,
-	scaner_slots = 0,
+	radar_slots = 0,
 	forcefield_generator_slots = 0,
 	special_equipment_slots = 0,
 	is_market_item = true,
@@ -82,7 +90,6 @@ register_wearable_item("saturn:basic_ship_hull_me",{
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 60000,
 	volume = 800,
 	free_space = 200,
@@ -91,8 +98,8 @@ register_wearable_item("saturn:basic_ship_hull_me",{
 	engine_slots = 1,
 	power_generator_slots = 1,
 	droid_slots = 0,
-	scaner_slots = 0,
-	forcefield_generator_slots = 0,
+	radar_slots = 1,
+	forcefield_generator_slots = 1,
 	special_equipment_slots = 0,
 	is_market_item = true,
 	player_visual = {
@@ -110,7 +117,6 @@ register_wearable_item("saturn:escape_pod",{
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 1000,
 	volume = 0,
 	free_space = 0,
@@ -119,7 +125,7 @@ register_wearable_item("saturn:escape_pod",{
 	engine_slots = 0,
 	power_generator_slots = 0,
 	droid_slots = 0,
-	scaner_slots = 0,
+	radar_slots = 0,
 	forcefield_generator_slots = 0,
 	special_equipment_slots = 0,
 	player_visual = {
@@ -148,7 +154,7 @@ local retractor_on_use = function(stack, player, pointed_thing)
 		if ship_lua['free_power'] - ship_lua['recharging_equipment_power_consumption'] >= rated_power then
 		    local time_of_last_shoot = 0
 		    local cooldown = stats['cooldown']
-		    local range = stats['range']
+		    local action_range = stats['action_range']
 		    if metadata then
 			if metadata['time_of_last_shoot'] then
 			    time_of_last_shoot = metadata['time_of_last_shoot']
@@ -156,8 +162,8 @@ local retractor_on_use = function(stack, player, pointed_thing)
 			if metadata['cooldown'] then
 			    cooldown = cooldown + metadata['cooldown']
 			end
-			if metadata['range'] then
-			    range = range + metadata['range']
+			if metadata['action_range'] then
+			    action_range = action_range + metadata['action_range']
 			end
 		    else
 			metadata = {}
@@ -168,11 +174,11 @@ local retractor_on_use = function(stack, player, pointed_thing)
 		    local current_time = minetest.get_gametime()
 		    local timediff = current_time - time_of_last_shoot
 		    if timediff >= cooldown then
-			if ship_lua.total_modificators['range'] then
-			    damage = damage + ship_lua.total_modificators['range']
+			if ship_lua.total_modificators['action_range'] then
+			    damage = damage + ship_lua.total_modificators['action_range']
 			end
 			local name = player:get_player_name()
-			local search_area = range
+			local search_area = action_range
 			local p_pos = player:getpos()
 			p_pos.y = p_pos.y + 1.6
 			local player_look_vec = vector.multiply(player:get_look_dir(),search_area)
@@ -312,12 +318,11 @@ register_wearable_item("saturn:basic_retractor",{
 				return stack
 			end
 		end,
-	},{
 	weight = 400,
 	volume = 1,
 	price = 100,
 	cooldown = 0.5,
-	range = 10,
+	action_range = 10,
 	max_wear = 2000, -- out of 65535
 	rated_power = 1, -- MW, megawatts
 	is_market_item = true,
@@ -341,12 +346,11 @@ register_wearable_item("saturn:retractor_scr2",{
 				return stack
 			end
 		end,
-	},{
 	weight = 800,
 	volume = 1.5,
 	price = 200,
 	cooldown = 0.5,
-	range = 16,
+	action_range = 16,
 	max_wear = 2000, -- out of 65535
 	rated_power = 2, -- MW, megawatts
 	is_market_item = true,
@@ -362,12 +366,28 @@ register_wearable_item("saturn:ionic_engine",{
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 400,
 	volume = 4,
 	price = 100,
 	traction = 80000,
-	max_wear = 65535, -- out of 65535
+	max_wear = 50000, -- out of 65535
+	rated_power = 4, -- MW, megawatts
+	is_market_item = true,
+})
+
+register_wearable_item("saturn:gravitational_engine",{
+		description = "Gravitational engine",
+		inventory_image = "saturn_gravitational_engine.png",
+	        range = 0.0,
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+	weight = 400,
+	volume = 4,
+	price = 10000,
+	traction = 800000,
+	max_wear = 50000, -- out of 65535
 	rated_power = 4, -- MW, megawatts
 	is_market_item = true,
 })
@@ -380,15 +400,34 @@ register_wearable_item("saturn:enemy_engine",{
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 440,
 	volume = 5,
 	price = 1000,
 	traction = 81000,
-	max_wear = 65535, -- out of 65535
+	max_wear = 40000, -- out of 65535
 	rated_power = 4, -- MW, megawatts
 	is_enemy_item = true,
 	possible_modifications = default_enemy_item_possible_modifications,
+	loot_level = 1,
+})
+
+-- Radars
+
+register_wearable_item("saturn:short_range_radar",{
+		description = "Short range radar",
+		inventory_image = "saturn_short_range_radar.png",
+	        range = 0.0,
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+	weight = 400,
+	volume = 4,
+	price = 100,
+	radar_range = 1000,
+	max_wear = 20000, -- out of 65535
+	rated_power = 4, -- MW, megawatts
+	is_market_item = true,
 })
 
 -- Power generators
@@ -401,11 +440,10 @@ register_wearable_item("saturn:mmfnr", {
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 2000, -- 1000 kg
 	volume = 10, -- 1000 cubic meter
 	generated_power = 6,
-	max_wear = 65535,
+	max_wear = 60000,
 	price = 100,
 	is_market_item = true,
 })
@@ -418,11 +456,10 @@ register_wearable_item("saturn:mmfnr2", {
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
 	weight = 7800, -- 1000 kg
 	volume = 38, -- 1000 cubic meter
 	generated_power = 24,
-	max_wear = 65535,
+	max_wear = 60000,
 	price = 1600,
 	is_market_item = true,
 })
@@ -435,14 +472,52 @@ register_wearable_item("saturn:enemy_power_generator", {
 		        max_drop_level = 0,
 		        groupcaps = {},
     		},
-	},{
-	weight = 7000, -- 1000 kg
-	volume = 50, -- 1000 cubic meter
+	weight = 7000,
+	volume = 50,
 	generated_power = 20,
-	max_wear = 65535,
+	max_wear = 60000,
 	price = 10000,
 	is_enemy_item = true,
 	possible_modifications = default_enemy_generator_item_possible_modifications,
+	loot_level = 1,
+})
+
+-- Forcefield generators
+
+register_wearable_item("saturn:forcefield_generator", {
+	description = "Forcefield generator",
+	inventory_image = "saturn_forcefield_generator.png",
+	        range = 0.0,
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+	weight = 7000,
+	volume = 10,
+	rated_power = 8,
+	forcefield_protection = 3.0,
+	max_wear = 2000,
+	price = 1000,
+	is_market_item = true,
+})
+
+register_wearable_item("saturn:enemy_forcefield_generator", {
+	description = "Enemy forcefield generator",
+	inventory_image = "saturn_enemy_forcefield_generator.png",
+	        range = 0.0,
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+	weight = 8500,
+	volume = 12,
+	rated_power = 10,
+	forcefield_protection = 2.7,
+	max_wear = 2000,
+	price = 8000,
+	is_enemy_item = true,
+	possible_modifications = default_enemy_item_possible_modifications,
+	loot_level = 2,
 })
 
 -- Weapons
@@ -627,7 +702,7 @@ local weapon_on_use = function(stack, player, pointed_thing)
 					stats.create_hit_effect(0.2, 1, object_pos)
 					local node_info = minetest.get_node(node_pos)
 					local node_stats = saturn.get_item_stats(node_info.name)
-					if node_info.name == "saturn:fog" or (not minetest.is_protected(node_pos) and ammo_type and node_stats and node_stats.destructible_by_weapons) then
+					if not minetest.is_protected(node_pos) and node_stats.toughness and node_stats.toughness < damage then
 						minetest.remove_node(node_pos)
 						saturn.create_node_explosion_effect(node_pos, node_info.name)
 					end
@@ -674,17 +749,16 @@ register_wearable_item("saturn:cdbcemw",{
 		        groupcaps = {},
     		},
 		on_use = weapon_on_use,
-	},{
 	weight = 400,
 	damage = 25,
 	cooldown = 1.5, -- seconds
-	volume = 5,
+	volume = 2.5,
 	price = 200,
 	max_wear = 2000, -- out of 65535
 	rated_power = 6, -- MW, megawatts
 	is_market_item = true,
 	sound_spec_single_shot = {name="saturn_plasm_accelerator", gain=0.5},
-	create_hit_effect = saturn.create_hit_effect
+	create_hit_effect = saturn.create_hit_effect,
 })
 
 register_wearable_item("saturn:enemy_particle_emitter",{
@@ -696,18 +770,18 @@ register_wearable_item("saturn:enemy_particle_emitter",{
 		        groupcaps = {},
     		},
 		on_use = weapon_on_use,
-	},{
 	weight = 500,
 	damage = 27,
 	cooldown = 1.5, -- seconds
-	volume = 7,
+	volume = 3.5,
 	price = 2000,
 	max_wear = 2000, -- out of 65535
 	rated_power = 6, -- MW, megawatts
 	is_enemy_item = true,
 	possible_modifications = default_enemy_weapon_item_possible_modifications,
 	sound_spec_single_shot = {name="saturn_plasm_accelerator", gain=0.5},
-	create_hit_effect = saturn.create_hit_effect
+	create_hit_effect = saturn.create_hit_effect,
+	loot_level = 1,
 })
 
 register_wearable_item("saturn:gauss_mg",{
@@ -716,24 +790,24 @@ register_wearable_item("saturn:gauss_mg",{
 	        range = 0.0,
 		tool_capabilities = {
 		        max_drop_level = 0,
-		        groupcaps = {},
+		            groupcaps={
+		                cracky={maxlevel=3},
+		            },
     		},
 		on_use = weapon_on_use,
-	},{
 	weight = 1200,
 	damage = 5, -- per "use_ammo_amount" ammo
 	use_ammo_type = "gauss_ammo",
 	use_ammo_amount = 2,
 	cooldown = 0.2, -- seconds
-	ignore_cooldown_modificators = true,
-	volume = 20,
-	price = 2000,
+	volume = 10,
+	price = 8000,
 	max_wear = 4000, -- out of 65535
 	rated_power = 12, -- MW, megawatts
 	is_market_item = true,
 	sound_spec_loop = {name="saturn_gauss_mg_shot", gain=1.0, max_hear_distance = 0.5, loop=true},
 	sound_spec_single_shot = {name="saturn_gauss_mg_shot_single", gain=1.0, max_hear_distance = 0.5},
-	create_hit_effect = saturn.create_gauss_hit_effect
+	create_hit_effect = saturn.create_gauss_hit_effect,
 })
 
 minetest.register_chatcommand("give_enemy_item", {
@@ -759,23 +833,22 @@ minetest.register_chatcommand("give_enemy_item", {
 
 -- Craft items
 
-local function register_craft_item(registry_name, item_definition, stats)
-        item_definition.wield_image = "null.png"
-	item_definition.on_drop = function(itemstack, player, pos)
+local function register_craft_item(registry_name, def)
+        def.wield_image = "null.png"
+	def.on_drop = function(itemstack, player, pos)
 		minetest.sound_play("saturn_item_drop", {to_player = player:get_player_name()})
 		saturn.throw_item(itemstack, player, pos)
 		itemstack:clear()
 		return itemstack
 	end
-	minetest.register_craftitem(registry_name, item_definition)
-	saturn.set_item_stats(registry_name, stats)
-	if stats.is_market_item then
+	minetest.register_craftitem(registry_name, def)
+	if def.is_market_item then
 		table.insert(saturn.market_items,registry_name)
 	end
-	if stats.is_enemy_item then
+	if def.is_enemy_item then
 		table.insert(saturn.enemy_items,registry_name)
 	end
-	if stats.is_ore then
+	if def.is_ore then
 		table.insert(saturn.ore_market_items, registry_name)
 	end
 end
@@ -785,41 +858,41 @@ end
 register_craft_item("saturn:enemy_hull_shard_a",{
 		description = "Enemy hull shard A",
 		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:1",
-	},{
 	weight = 400,
 	volume = 10,
 	price = 100,
 	is_enemy_item = true,
+	loot_level = 1,
 })
 
 register_craft_item("saturn:enemy_hull_shard_b",{
 		description = "Enemy hull shard B",
 		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:2",
-	},{
 	weight = 500,
 	volume = 10,
 	price = 120,
 	is_enemy_item = true,
+	loot_level = 1,
 })
 
 register_craft_item("saturn:enemy_hull_shard_c",{
 		description = "Enemy hull shard C",
 		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:3",
-	},{
 	weight = 400,
 	volume = 10,
 	price = 100,
 	is_enemy_item = true,
+	loot_level = 1,
 })
 
 register_craft_item("saturn:enemy_hull_shard_d",{
 		description = "Enemy hull shard D",
 		inventory_image = "saturn_enemy_hull_shards.png^[verticalframe:4:4",
-	},{
 	weight = 400,
 	volume = 10,
 	price = 100,
 	is_enemy_item = true,
+	loot_level = 1,
 })
 
 -- Ammo
@@ -827,8 +900,7 @@ register_craft_item("saturn:enemy_hull_shard_d",{
 register_craft_item("saturn:gauss_solid_ironnickel_bullets",{
 		description = "Gauss solid ironnickel bullets",
 		inventory_image = "saturn_gauss_solid_ironnickel_bullets.png",
-	},{
-	stack_max = 99,
+		stack_max = 999,
 	weight = 10,
 	volume = 0.0001,
 	price = 1,
@@ -840,8 +912,7 @@ register_craft_item("saturn:gauss_solid_ironnickel_bullets",{
 register_craft_item("saturn:gauss_mo_permalloy_with_depleted_uranium_core_bullets",{
 		description = "Gauss Mo-permalloy with depleted uranium core bullets",
 		inventory_image = "saturn_gauss_mo_permalloy_with_depleted_uranium_core_bullets.png",
-	},{
-	stack_max = 99,
+		stack_max = 999,
 	weight = 11,
 	volume = 0.0001,
 	price = 2.25,
@@ -853,7 +924,6 @@ register_craft_item("saturn:gauss_mo_permalloy_with_depleted_uranium_core_bullet
 register_craft_item("saturn:clean_water",{
 		description = "Clean water",
 		inventory_image = "saturn_cells.png^[verticalframe:64:1",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.2,
@@ -863,7 +933,6 @@ register_craft_item("saturn:clean_water",{
 register_craft_item("saturn:heavy_water",{
 		description = "Heavy water",
 		inventory_image = "saturn_cells.png^[verticalframe:64:2",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1,
@@ -873,7 +942,6 @@ register_craft_item("saturn:heavy_water",{
 register_craft_item("saturn:silicate_mix",{
 		description = "Silicate mix",
 		inventory_image = "saturn_cells.png^[verticalframe:64:3",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -883,7 +951,6 @@ register_craft_item("saturn:silicate_mix",{
 register_craft_item("saturn:ammonia",{
 		description = "Ammonia",
 		inventory_image = "saturn_cells.png^[verticalframe:64:4",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -893,7 +960,6 @@ register_craft_item("saturn:ammonia",{
 register_craft_item("saturn:acetic_acid",{
 		description = "Acetic acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:5",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -903,7 +969,6 @@ register_craft_item("saturn:acetic_acid",{
 register_craft_item("saturn:formic_acid",{
 		description = "Formic acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:6",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -913,7 +978,6 @@ register_craft_item("saturn:formic_acid",{
 register_craft_item("saturn:amorphous_carbon",{
 		description = "Amorphous carbon",
 		inventory_image = "saturn_cells.png^[verticalframe:64:7",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -923,7 +987,6 @@ register_craft_item("saturn:amorphous_carbon",{
 register_craft_item("saturn:carbon_dioxide",{
 		description = "Carbon dioxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:8",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -933,7 +996,6 @@ register_craft_item("saturn:carbon_dioxide",{
 register_craft_item("saturn:phosphine",{
 		description = "Phosphine",
 		inventory_image = "saturn_cells.png^[verticalframe:64:9",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -943,7 +1005,6 @@ register_craft_item("saturn:phosphine",{
 register_craft_item("saturn:orthophosphoric_acid",{
 		description = "Orthophosphoric acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:10",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 3,
@@ -953,7 +1014,6 @@ register_craft_item("saturn:orthophosphoric_acid",{
 register_craft_item("saturn:ammonia_nitrate",{
 		description = "Ammonia nitrate",
 		inventory_image = "saturn_cells.png^[verticalframe:64:11",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1,
@@ -963,7 +1023,6 @@ register_craft_item("saturn:ammonia_nitrate",{
 register_craft_item("saturn:diammonium_phosphate",{
 		description = "Diammonium phosphate",
 		inventory_image = "saturn_cells.png^[verticalframe:64:12",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1,
@@ -973,7 +1032,6 @@ register_craft_item("saturn:diammonium_phosphate",{
 register_craft_item("saturn:oxygen",{
 		description = "Oxygen",
 		inventory_image = "saturn_cells.png^[verticalframe:64:13",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -983,7 +1041,6 @@ register_craft_item("saturn:oxygen",{
 register_craft_item("saturn:nitric_acid",{
 		description = "Nitric acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:14",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -993,7 +1050,6 @@ register_craft_item("saturn:nitric_acid",{
 register_craft_item("saturn:hydrogen_sulphide",{
 		description = "Hydrogen sulphide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:15",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -1003,7 +1059,6 @@ register_craft_item("saturn:hydrogen_sulphide",{
 register_craft_item("saturn:sulphur",{
 		description = "Sulphur",
 		inventory_image = "saturn_cells.png^[verticalframe:64:16",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.2,
@@ -1013,7 +1068,6 @@ register_craft_item("saturn:sulphur",{
 register_craft_item("saturn:sulphide_salts_mix",{
 		description = "Sulphide salts mix",
 		inventory_image = "saturn_cells.png^[verticalframe:64:17",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 0.2,
@@ -1023,7 +1077,6 @@ register_craft_item("saturn:sulphide_salts_mix",{
 register_craft_item("saturn:silicon_dioxide",{
 		description = "Silicon_dioxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:18",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1033,7 +1086,6 @@ register_craft_item("saturn:silicon_dioxide",{
 register_craft_item("saturn:potassium_oxide",{
 		description = "Potassium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:19",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1043,7 +1095,6 @@ register_craft_item("saturn:potassium_oxide",{
 register_craft_item("saturn:calcium_oxide",{
 		description = "Calcium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:20",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1053,7 +1104,6 @@ register_craft_item("saturn:calcium_oxide",{
 register_craft_item("saturn:magnesium_oxide",{
 		description = "Magnesium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:21",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1063,7 +1113,6 @@ register_craft_item("saturn:magnesium_oxide",{
 register_craft_item("saturn:sodium_oxide",{
 		description = "Sodium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:22",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1073,7 +1122,6 @@ register_craft_item("saturn:sodium_oxide",{
 register_craft_item("saturn:alkali_solution",{
 		description = "Alkali solution",
 		inventory_image = "saturn_cells.png^[verticalframe:64:23",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1083,7 +1131,6 @@ register_craft_item("saturn:alkali_solution",{
 register_craft_item("saturn:metal_oxides_sludge",{
 		description = "Metal oxides sludge",
 		inventory_image = "saturn_cells.png^[verticalframe:64:24",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1093,7 +1140,6 @@ register_craft_item("saturn:metal_oxides_sludge",{
 register_craft_item("saturn:sodiumless_lithiumless_alkali_solution",{
 		description = "Sodiumless lithiumless alkali solution",
 		inventory_image = "saturn_cells.png^[verticalframe:64:25",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 6,
@@ -1103,7 +1149,6 @@ register_craft_item("saturn:sodiumless_lithiumless_alkali_solution",{
 register_craft_item("saturn:sulphuric_acid",{
 		description = "Sulphuric acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:26",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 1.1,
@@ -1113,7 +1158,6 @@ register_craft_item("saturn:sulphuric_acid",{
 register_craft_item("saturn:sodium_hydroxide",{
 		description = "Sodium hydroxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:27",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 6,
@@ -1123,7 +1167,6 @@ register_craft_item("saturn:sodium_hydroxide",{
 register_craft_item("saturn:lithium_hydroxide",{
 		description = "lithium hydroxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:28",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 6,
@@ -1133,7 +1176,6 @@ register_craft_item("saturn:lithium_hydroxide",{
 register_craft_item("saturn:complex_fertilizer",{
 		description = "Complex fertilizer pellets for hydroponic farms",
 		inventory_image = "saturn_complex_fertilizer.png",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 4.5,
@@ -1143,7 +1185,6 @@ register_craft_item("saturn:complex_fertilizer",{
 register_craft_item("saturn:fresh_fruits_and_vegetables",{
 		description = "Fresh fruits and vegetables",
 		inventory_image = "saturn_fresh_fruits_and_vegetables.png",
-	},{
 	weight = 10,
 	volume = 0.01,
 	price = 8,

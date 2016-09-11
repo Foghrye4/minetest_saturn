@@ -38,5 +38,15 @@ saturn.sign_of_number = function(a)
 end
 
 saturn.get_pseudogaussian_random = function(median, scale)
-	return math.tan(math.random()*math.pi/2)*scale+median
+	return math.tan((math.random()-0.5)*math.pi)*scale+median
+end
+
+saturn.reduce_value_by_module = function(a)
+	if a==0 then
+		return 0
+	elseif a<0 then
+		return a+1
+	else
+		return a-1
+	end
 end

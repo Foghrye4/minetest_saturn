@@ -9,12 +9,12 @@ saturn.players_save_interval = 1000
 saturn.save_timer = saturn.players_save_interval
 saturn.market_update_interval = 1000
 saturn.market_update_timer = saturn.market_update_interval
-saturn.item_stats = {}
 saturn.market_items = {}
 saturn.ore_market_items = {}
 saturn.microfactory_market_items = {}
 saturn.enemy_item_count = 0
 saturn.enemy_items = {}
+saturn.enemy_items_by_level = {}
 saturn.ores = {}
 saturn.hud_healthbar_id = -1
 saturn.hud_energybar_id = -1
@@ -24,6 +24,9 @@ saturn.hud_attack_info_text_id = -1
 saturn.hud_attack_info_frame_id = -1
 saturn.hud_hotbar_cooldown = {}
 saturn.hotbar_cooldown = {}
+saturn.hud_radar_shelf = {}
+saturn.hud_radar_text = {}
+saturn.radars = {}
 saturn.microfactory_nets = {}
 saturn.recipe_outputs = {}
 
@@ -32,6 +35,8 @@ local fov_x = fov*1.1
 local fov_y = fov
 local tan_fov_x = math.tan(math.pi*fov_x/360)
 local tan_fov_y = math.tan(math.pi*fov_y/360)
+local getVectorPitchAngle = saturn.get_vector_pitch_angle
+local getVectorYawAngle = saturn.get_vector_yaw_angle
 
 saturn.get_onscreen_coords_of_object = function(player, object) --highly inaccurate
 	local look_dir=player:get_look_dir()
@@ -41,7 +46,12 @@ saturn.get_onscreen_coords_of_object = function(player, object) --highly inaccur
 	local look_yaw = player:get_look_yaw()
 	local look_pitch = player:get_look_pitch()
 	local player_pos = player:getpos()
-	local object_pos = object:getpos()
+	local object_pos = nil
+	if type(object) == "table" then
+		object_pos = object
+	else
+		object_pos = object:getpos()
+	end
 	local vector_to_object = vector.subtract(object_pos, player_pos)
 	local distance_to_object = vector.length(vector_to_object)
 	local look_vector_extended_to_point_on_object_sphere = vector.multiply(look_dir, distance_to_object)
@@ -119,7 +129,7 @@ saturn.get_item_weight = function(list_name, item_stack)
 	if list_name == "hangar" then
 		value = 0
 	else
-		local stats = saturn.item_stats[item_name]
+		local stats = minetest.registered_items[item_name]
 		if stats ~= nil then
 			if stats['weight'] then
 				value = stats['weight']
@@ -137,11 +147,11 @@ end
 
 saturn.get_item_volume = function(list_name, item_stack)
 	local item_name = item_stack:get_name()
-	local value = 1
+	local value = 0.01
 	if list_name == "ship_hull" or list_name == "hangar" then
 		value = 0
 	else
-		local stats = saturn.item_stats[item_name]
+		local stats = minetest.registered_items[item_name]
 		if stats ~= nil then
 			if stats['volume'] then
 				value = stats['volume']
@@ -160,7 +170,7 @@ end
 saturn.get_item_stat = function(item_stack, stat_name, default_value)
 	local item_name = item_stack:get_name()
 	local value = default_value
-	local stats = saturn.item_stats[item_name]
+	local stats = minetest.registered_items[item_name]
 	if stats ~= nil then
 		if stats[stat_name] then
 			value = stats[stat_name]
@@ -334,7 +344,12 @@ saturn.punch_object = function(punched, puncher, damage)
 		local ship_hull_stack = inv:get_stack("ship_hull", 1)
 		local hull_stats = saturn.get_item_stats(ship_hull_stack:get_name())
 		if hull_stats then
-			ship_hull_stack:add_wear(damage * saturn.MAX_ITEM_WEAR / hull_stats['max_wear'])
+			local ship_lua = punched:get_attach():get_luaentity()
+			local forcefield_protection = ship_lua['forcefield_protection']
+			if ship_lua.total_modificators['forcefield_protection'] then
+				forcefield_protection = math.min(90, forcefield_protection + ship_lua.total_modificators['forcefield_protection'])
+			end
+			ship_hull_stack:add_wear(damage * saturn.MAX_ITEM_WEAR * (100-forcefield_protection)/100/hull_stats['max_wear'])
 			if ship_hull_stack:is_empty() then
 				for list_name,list in pairs(inv:get_lists()) do
 					for listpos,stack in pairs(list) do
@@ -353,9 +368,8 @@ saturn.punch_object = function(punched, puncher, damage)
 			end
 			saturn.refresh_health_hud(punched)
 			local name = punched:get_player_name()
-			local ship_lua = punched:get_attach():get_luaentity()
 			punched:set_inventory_formspec(saturn.get_player_inventory_formspec(punched,ship_lua['current_gui_tab']))
-			ship_lua.hit_effect_timer = 5.0
+			ship_lua.hit_effect_timer = 3.0
 			ship_lua.last_attacker = puncher
 
 		end
@@ -367,22 +381,25 @@ saturn.punch_object = function(punched, puncher, damage)
 	end
 end
 
-local on_throwed_step = function(self, dtime) -- Taken from PilzAdam Throwing mod from https://github.com/PilzAdam/throwing/
+local on_throwed_step = function(self, dtime) -- Taken from PilzAdam Throwing mod with few changes from https://github.com/PilzAdam/throwing/
     self.age=self.age+dtime
+    self.collision_timer = self.collision_timer +dtime
     local pos = self.object:getpos()
     local node = minetest.env:get_node(pos)
     local self_velocity = self.object:getvelocity()
-    if self.age>0.2 then
+    if self.collision_timer > 2.0 then
 		local objs = minetest.env:get_objects_inside_radius({x=pos.x,y=pos.y,z=pos.z}, math.min(2,self.age))
 		for k, obj in pairs(objs) do
 			local collided = obj:get_luaentity()
 			if collided then
 				if collided.name ~= self.name and collided.name ~= "__builtin:item" then
-					local damage = vector.length(vector.subtract(obj:getvelocity(), self_velocity))
-					if collided.name == "saturn:spaceship" and collided.driver and damage > 1.0 then 
-						saturn.punch_object(collided.driver, self.object, damage)
-					else
-						saturn.punch_object(obj, self.object, damage)
+					local damage = vector.length(vector.subtract(obj:getvelocity(), self_velocity)) * 0.1
+					if damage > 1.0 then
+						if collided.name == "saturn:spaceship" and collided.driver then 
+							saturn.punch_object(collided.driver, self.object, damage)
+						else
+							saturn.punch_object(obj, self.object, damage)
+						end
 					end
 					if damage < 10 then
 						self.object:setvelocity(vector.add(obj:getvelocity(),vector.multiply(self_velocity, -0.5)))
@@ -390,6 +407,8 @@ local on_throwed_step = function(self, dtime) -- Taken from PilzAdam Throwing mo
 						self.itemstring = ''
 						self.object:remove()
 					end
+					self.collision_timer = 0
+					return
 				end
 			end
 		end
@@ -407,21 +426,20 @@ end
 local throwable_item_entity={
 	initial_properties = {
 		is_visible = false,
-		physical = false,
-		collisionbox = {0,0,0,0,0,0},
+		physical = true,
+		collisionbox = {-0.25,-0.25,-0.25,0.25,0.25,0.25},
 		visual = "sprite",
 		visual_size = {x = 0.4, y = 0.4},
 		textures = {""},
 		infotext = "",
 	},
-
+	physical = true,
+	collision_timer = 2.0,
 	age = 0,
 	lastpos={},
 	itemstring = '',
 
-	on_step = function(self, dtime)
-		on_throwed_step(self, dtime)
-	end,
+	on_step = on_throwed_step,
 
 	set_item = function(self, itemstring)
 		self.itemstring = itemstring
@@ -541,11 +559,11 @@ saturn.get_ship_equipment_formspec = function(player)
 			formspec = formspec.."image_button[4.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+droid+"..(iy+1)..";]"
 		end
 	end
-	if inv:get_size("scaner") > 0 then
-		formspec = formspec.."box[5,0;0.8,3.9;#00FFF0]"..get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Scaner")..
-		"list[current_player;scaner;5,0;1,4;]"
-		for iy = 0, inv:get_size("scaner")-1 do
-			formspec = formspec.."image_button[5.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+scaner+"..(iy+1)..";]"
+	if inv:get_size("radar") > 0 then
+		formspec = formspec.."box[5,0;0.8,0.9;#00FFF0]"..get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Radar")..
+		"list[current_player;radar;5,0;1,4;]"
+		for iy = 0, inv:get_size("radar")-1 do
+			formspec = formspec.."image_button[5.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+radar+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("forcefield_generator") > 0 then
@@ -605,14 +623,20 @@ saturn.get_player_inventory_formspec = function(player, tab)
 			if traction_bonus then
 				traction = traction + traction_bonus
 			end
+			local forcefield_protection = ship_lua['forcefield_protection']
+			local forcefield_protection_bonus = ship_lua.total_modificators['forcefield_protection']
+			if forcefield_protection_bonus then
+				forcefield_protection = forcefield_protection + forcefield_protection_bonus
+			end
 			return default_formspec..
 				"label[0,0;"..minetest.formspec_escape("Hull damage: ")..string.format ('%4.0f',display_status).."/"..hull_max_wear.."]"..
 				"label[0,0.25;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
 				"label[0,0.5;"..minetest.formspec_escape("Occupied hold volume: ")..string.format ('%4.2f',ship_lua['volume']).."/"..max_volume.." m3]"..
 				"label[0,0.75;"..minetest.formspec_escape("Total ship weight: ")..string.format ('%4.0f',ship_lua['weight']).." kg]"..
 				"label[0,1.0;"..minetest.formspec_escape("Traction: ")..string.format ('%4.1f',traction/1000).." kN]"..
-				"label[0,1.25;"..minetest.formspec_escape("Max acceleration: ")..string.format ('%4.1f',traction/ship_lua['weight']).." m/s2]"..
-				"label[0,1.5;"..minetest.formspec_escape("Free power: ")..string.format ('%4.0f',ship_lua['free_power']).." MW]"..
+				"label[0,1.25;"..minetest.formspec_escape("Forcefield damage absorption: ")..string.format ('%4.1f',forcefield_protection).." %]"..
+				"label[0,1.5;"..minetest.formspec_escape("Max acceleration: ")..string.format ('%4.1f',traction/ship_lua['weight']).." m/s2]"..
+				"label[0,1.75;"..minetest.formspec_escape("Free power: ")..string.format ('%4.0f',ship_lua['free_power']).." MW]"..
 				"button[0,2;4,1;abandon_ship;Abandon ship]"
 		elseif tab == 2 then
 			return default_formspec..saturn.get_ship_equipment_formspec(player)
@@ -628,31 +652,49 @@ saturn.get_item_info_formspec = function(item_stack)
 		"label[1,0.0;"..item_name.."]"..
 		"image_button[6.5,0.1;1.5,0.4;saturn_back_button_icon.png;ii_return;Back  ;false;false;saturn_back_button_icon.png]"
 	local row_step = 0.3
-	local row = 1-row_step
+	local row = 1
 	formspec = formspec.."label[0,"..row..";Basic properties:]"
-	for key,value in pairs(saturn.item_stats[item_name]) do
-		row = row + row_step
-		local string_value
-		if type(value) == "number" then
-			string_value = string.format('%4.2f',value)
-		else
-			string_value = tostring(value)
+	row = row + 0.1
+	if minetest.registered_items[item_name] then
+		for key,value in pairs(minetest.registered_items[item_name]) do
+			if not saturn.localisation_and_units[key] then
+				error("Missing localisation for "..key)
+				return
+			end
+			if not saturn.localisation_and_units[key].hidden then
+				row = row + row_step
+				local localisation = saturn.localisation_and_units[key]
+				local string_value
+				if type(value) == "number" then
+					string_value = string.format(localisation.format_normal,value) .." ".. localisation.units
+				else
+					string_value = tostring(value)
+				end
+				formspec = formspec.."label[0,"..row..";"..localisation.name..": "..string_value.."]"
+			end
 		end
-		formspec = formspec.."label[0,"..row..";"..key.."="..string_value.."]"
 	end
 	local metadata = minetest.deserialize(item_stack:get_metadata())
 	if metadata then
 		row = row + row_step*2
 		formspec = formspec.."label[0,"..row..";Special properties:]"
+		row = row + 0.1
 		for key,value in pairs(metadata) do
-			row = row + row_step
-			local string_value
-			if type(value) == "number" then
-				string_value = string.format('%+4.2f',value)
-			else
-				string_value = tostring(value)
+			if not saturn.localisation_and_units[key] then
+				error("Missing localisation for "..key)
+				return
 			end
-			formspec = formspec.."label[0,"..row..";"..key.."="..string_value.."]"
+			if not saturn.localisation_and_units[key].hidden then
+				row = row + row_step
+				local localisation = saturn.localisation_and_units[key]
+				local string_value
+				if type(value) == "number" then
+					string_value = string.format(localisation.format_special,value) .." ".. localisation.units
+				else
+					string_value = tostring(value)
+				end
+				formspec = formspec.."label[0,"..row..";"..localisation.name..": "..string_value.."]"
+			end
 		end
 	end
 	return formspec
@@ -692,16 +734,12 @@ saturn.throw_item = function(stack, ship, pos)
 	obj:get_luaentity():set_item(stack:to_string())
 end
 
-saturn.set_item_stats = function(item_name, stats)
-	saturn.item_stats[item_name] = stats
-end
-
 saturn.get_item_stats = function(item_name)
-	return saturn.item_stats[item_name]
+	return minetest.registered_items[item_name]
 end
 
 saturn.get_item_price = function(item_name)
-	local stats = saturn.item_stats[item_name]
+	local stats = minetest.registered_items[item_name]
 	if stats ~= nil then
 		local value = stats['price']
 		if value ~= nil then
@@ -714,13 +752,38 @@ end
 saturn.generate_random_enemy_item = function()
 	local item_name = saturn.enemy_items[math.random(#saturn.enemy_items)]
 	local item_stack = ItemStack(item_name)
-	local item_stats = saturn.item_stats[item_name]
+	local item_stats = minetest.registered_items[item_name]
 	local possible_modifications = item_stats.possible_modifications
 	if possible_modifications then 
 		local modifications = {}
 		for key,value in pairs(possible_modifications) do
 			local median = (value[1] + value[2])/2
 			local scale = value[2] - median
+			local modification_power = saturn.get_pseudogaussian_random(median, scale)
+			if math.abs(modification_power) > scale then
+				if modification_power < 0 and item_stats[key] then
+					modifications[key] = math.max(scale*0.1 - item_stats[key], modification_power)
+				else
+					modifications[key] = modification_power
+				end
+				
+			end
+		end
+		item_stack:set_metadata(minetest.serialize(modifications))
+	end
+	return item_stack
+end
+
+saturn.generate_random_leveled_enemy_item = function(loot_level, loot_modifications_scale)
+	local item_name = saturn.enemy_items_by_level[loot_level][math.random(#saturn.enemy_items_by_level[loot_level])]
+	local item_stack = ItemStack(item_name)
+	local item_stats = minetest.registered_items[item_name]
+	local possible_modifications = item_stats.possible_modifications
+	if possible_modifications then 
+		local modifications = {}
+		for key,value in pairs(possible_modifications) do
+			local median = (value[1] + value[2])/2
+			local scale = (value[2] - median) * loot_modifications_scale
 			local modification_power = saturn.get_pseudogaussian_random(median, scale)
 			if math.abs(modification_power) > scale then
 				if modification_power < 0 and item_stats[key] then
@@ -746,6 +809,118 @@ minetest.register_globalstep(function(dtime)
     if saturn.market_update_timer <= 0 then
 	saturn.market_update_timer = saturn.market_update_interval
 	saturn:update_space_station_market()
+    end
+    local current_handled_enemy = saturn.current_handled_enemy
+    if current_handled_enemy > #saturn.virtual_enemy then
+	current_handled_enemy = 1
+    end
+    local current_handled_loaded_enemy = saturn.current_handled_loaded_enemy
+    local next_handled_loaded_enemy, lee = next(saturn.loaded_enemy_entity, current_handled_loaded_enemy)
+    if lee and not lee.object:getpos() then
+	table.insert(saturn.virtual_enemy, lee.ve)
+	saturn.loaded_enemy_entity[lee.uid] = nil
+	next_handled_loaded_enemy, lee = next(saturn.loaded_enemy_entity)
+    end
+    saturn.current_handled_loaded_enemy = next_handled_loaded_enemy
+    local ert = saturn.enemy_respawn_timer - dtime
+    if ert < 0.0 then
+	ert = 900
+	local ess = saturn.enemy_space_station
+	if not ess.is_destroyed then
+	    table.insert(saturn.virtual_enemy,{
+		x=ess.x,
+		y=ess.y,
+		z=ess.z,
+		vel_x=math.random(100)-50,
+		vel_y=math.random(100)-50,
+		vel_z=math.random(100)-50,
+		entity_name=saturn.enemy_spawn_conditions[math.random(#saturn.enemy_spawn_conditions)],})
+	end
+    end
+    saturn.enemy_respawn_timer = ert
+    if #saturn.virtual_enemy > 0 then
+	for i=1,16 do
+	    local ve = saturn.virtual_enemy[current_handled_enemy]	
+	    if ve then
+		local vel_x = ve.vel_x
+		local vel_y = ve.vel_y
+		local vel_z = ve.vel_z
+		local pos_x = ve.x + vel_x
+		local pos_y = ve.y + vel_y
+		local pos_z = ve.z + vel_z
+		if saturn.player_ship_ref then
+			local psp = saturn.player_ship_ref:getpos()
+			vel_x = (psp.x - pos_x)/100
+			vel_y = (psp.y - pos_y)/100
+			vel_z = (psp.z - pos_z)/100
+		else
+			if pos_x < -30000 then
+				vel_x = math.random(100)
+			elseif pos_x > 30000 then
+				vel_x = -math.random(100)
+			end
+			if pos_y < 400 then
+				vel_y = math.random(100)
+			elseif pos_y > 30000 then
+				vel_y = -math.random(100)
+			end
+			if pos_z < -30000 then
+				vel_z = math.random(100)
+			elseif pos_z > 30000 then
+				vel_z = -math.random(100)
+			end
+		end
+		ve.x=pos_x
+		ve.y=pos_y
+		ve.z=pos_z
+		ve.vel_x=vel_x
+		ve.vel_y=vel_y
+		ve.vel_z=vel_z
+		local node = minetest.get_node(ve)
+--		if pos_x < saturn.debug_enemy_pos_dump_threshold and pos_x > -saturn.debug_enemy_pos_dump_threshold and pos_y < saturn.debug_enemy_pos_dump_threshold and pos_z < saturn.debug_enemy_pos_dump_threshold and pos_z > -saturn.debug_enemy_pos_dump_threshold then
+--			minetest.chat_send_all("xyz={"..string.format("%d",ve.x).."."..string.format("%d",ve.y).."."..string.format("%d",ve.z).."}")
+--		end
+		if node.name == "air" then
+		    table.remove(saturn.virtual_enemy, current_handled_enemy)
+		    local entity = minetest.add_entity(ve, ve.entity_name or "saturn:enemy_01")
+		    local direction_velocity = vector.new(vel_x,vel_y,vel_z)
+		    if entity then
+			entity:setvelocity(direction_velocity)
+			local yaw = -getVectorYawAngle(direction_velocity)
+			local pitch = -getVectorPitchAngle(direction_velocity)
+			entity:set_bone_position("Head", {x=0,y=1,z=0}, {x=pitch*180/3.14159,y=0,z=yaw*180/3.14159})
+		    end
+		    for p_name, radar in pairs(saturn.radars) do
+			local lua_e = radar.obj:get_luaentity()
+			if lua_e.radar_object_state[ve] then --purge radar list is fastest way to get rid from loaded enemy
+			    lua_e.radar_object_state = {}
+			    lua_e.radar_object_list = {}
+			end
+		    end
+		else
+		    for p_name, radar in pairs(saturn.radars) do
+			local radar_pos = radar.obj:getpos()
+			local radar_range = radar.radius
+			if pos_x > radar_pos.x - radar_range and
+				pos_x < radar_pos.x + radar_range and
+				pos_y > radar_pos.y - radar_range and
+				pos_y < radar_pos.y + radar_range and
+				pos_z > radar_pos.z - radar_range and
+				pos_z < radar_pos.z + radar_range then
+			    local lua_e = radar.obj:get_luaentity()
+			    if #lua_e.radar_object_list < 8 and not lua_e.radar_object_state[ve] then
+				table.insert(lua_e.radar_object_list,ve)
+				lua_e.radar_object_state[ve] = true
+			    end
+			end
+		    end
+		end
+		current_handled_enemy = current_handled_enemy + 1
+	    else
+		break
+	    end
+	end
+	saturn.current_handled_enemy = current_handled_enemy
     end
     for _,player in ipairs(minetest.get_connected_players()) do
 	local player_inv = player:get_inventory()
@@ -775,4 +950,5 @@ end)
 
 minetest.register_on_shutdown(function()
 	saturn:save_players()
+	saturn:save_enemy_info()
 end)

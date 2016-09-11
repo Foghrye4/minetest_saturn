@@ -148,22 +148,41 @@ register_node_with_stats("saturn:world_anchor_protector", {
 		end
 		minetest.add_entity(vector.add(pos_to_block_pos(pos),8), "saturn:display")
 	end,
-	},{
 	weight = 8000,
 	volume = 1,
 	price = 1000,
-	noise_offset = -1.5,
 	single_per_player = true,
 })
 
+register_node_with_stats("saturn:torch", {
+	description = "Torch",
+	drawtype = "mesh",
+	mesh = "saturn_torch.b3d",
+	tiles = {"saturn_torch.png", 
+		"saturn_torch.png", 
+		"saturn_torch.png", 
+		"saturn_torch.png"},
+	paramtype = "light",
+	paramtype2 = "wallmounted",
+	groups = {cracky = 3},
+	sunlight_propagates = true,
+	walkable = false,
+	light_source = 14,
+	weight = 100,
+	volume = 0.3,
+	price = 10,
+})
+
+
 table.insert(saturn.microfactory_market_items, "saturn:world_anchor_protector")
+table.insert(saturn.microfactory_market_items, "saturn:torch")
 
 local get_node_power = function(pos)
 	local node_name = minetest.get_node(pos).name
 	local meta = minetest.get_meta(pos)
 	local rated_power = meta:get_int("rated_power")
 	local generated_power = meta:get_int("generated_power")
-	local stats = saturn.item_stats[node_name]
+	local stats = minetest.registered_items[node_name]
 	if stats ~= nil then
 		if stats['rated_power'] then
 			rated_power = rated_power + stats['rated_power']
@@ -423,7 +442,6 @@ register_node_with_stats("saturn:microfactory_power_generator", {
         on_metadata_inventory_take = function(pos, listname, index, stack, player)
 		on_microfactory_generator_metadata_inventory_take(pos, listname, index, stack, player)
 	end,
-	},{
 	weight = 8000,
 	volume = 1,
 	price = 200,
@@ -449,7 +467,7 @@ end
 
 local get_microfactory_formspec = function(pos, node)
 	local meta = minetest.get_meta(pos)
-	local cycle_time = saturn.item_stats[node.name].cycle_time
+	local cycle_time = minetest.registered_items[node.name].cycle_time
 	local progress = meta:get_int("progress")
 	local net_id = meta:get_string("microfactory_net_id")
 	return microfactory_formspec(pos, progress, cycle_time, saturn.microfactory_nets[net_id].energy<0)
@@ -485,7 +503,7 @@ local on_microfactory_node_timer = function(pos,elapsed)
 	local meta = minetest.get_meta(pos)
 	local node = minetest.get_node(pos)
 	local node_name = node.name
-	local cycle_time = saturn.item_stats[node_name].cycle_time
+	local cycle_time = minetest.registered_items[node_name].cycle_time
 	local progress = meta:get_int("progress")
 	local net_id = meta:get_string("microfactory_net_id")
 	if saturn.microfactory_nets[net_id].energy < 0 then
@@ -690,8 +708,7 @@ local register_microfactory = function(name, _description, texture, _rated_power
 	end,
         on_metadata_inventory_take = function(pos, listname, index, stack, player)
 	end,
-	on_receive_fields = on_microfactory_receive_fields
-	},{
+	on_receive_fields = on_microfactory_receive_fields,
 	rated_power = _rated_power,
 	weight = 2000,
 	volume = 1,
