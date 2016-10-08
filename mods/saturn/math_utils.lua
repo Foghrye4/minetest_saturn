@@ -50,3 +50,18 @@ saturn.reduce_value_by_module = function(a)
 		return a-1
 	end
 end
+
+saturn.is_inside_aabb = function(pos, minp, maxp)
+    return minp.x <= pos.x and 
+	minp.y <= pos.y and 
+	minp.z <= pos.z and 
+	maxp.x > pos.x and 
+	maxp.y > pos.y and 
+	maxp.z > pos.z
+end
+
+saturn.date_to_string = function(seconds)
+	local hours = math.floor(seconds/3600)
+	local minutes = math.floor((seconds-hours*3600)/60)
+	return string.format ('%02d',hours)..":"..string.format ('%02d',minutes)..":"..string.format ('%02d',seconds-minutes*60-hours*3600)
+end

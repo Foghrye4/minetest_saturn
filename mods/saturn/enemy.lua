@@ -2,11 +2,11 @@ saturn.enemy_ai_phase = false
 saturn.enemy_spawn_conditions = {}
 saturn.current_handled_enemy = 1
 saturn.debug_enemy_pos_dump_threshold = 1000
-saturn.player_pos_y_max_reached = 400
+saturn.player_pos_y_max_reached = 1000
 saturn.player_ship_ref = nil
 saturn.loaded_enemy_entity = {}
 saturn.current_handled_loaded_enemy = nil
-saturn.enemy_respawn_timer = 900 -- Changing this will not change respawn rate.
+saturn.enemy_respawn_timer = 10 -- Changing this will not change respawn rate.
 local enemy_start_number = 12800
 local enemy_player_tracking_range = 128
 local enemy_player_tracking_interval = 20 -- seconds
@@ -49,9 +49,27 @@ end
 saturn.load_enemy_info()
 
 if not saturn.enemy_space_station then
-	saturn.enemy_space_station = {x = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000),y = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000),z = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000)}
+    saturn.enemy_space_station = {}
+    for i = 1, 2 do
+	local x = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3)
+	local y = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3)
+	local z = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3)
+	local minp = {
+		x = x - 28 - 128,
+		y = y - 28 - 128,
+		z = z - 28 - 128,}
+	local maxp = {
+		x = x + 228 + 128,
+		y = y + 28 + 128,
+		z = z + 28 + 128,}
+	saturn.enemy_space_station[i] = {x = x,
+		y = y,
+		z = z,
+		minp = minp,
+		maxp = maxp,
+		}
+    end
 end
-
 
 if not saturn.virtual_enemy then
 	local ess = saturn.enemy_space_station
@@ -60,22 +78,34 @@ if not saturn.virtual_enemy then
 		local pos_x = math.random(30000) - 15000
 		local pos_y = math.random(20000)
 		local pos_z = math.random(30000) - 15000
-		local vel_x = math.random(100)-50
-		local vel_y = math.random(100)-50
-		local vel_z = math.random(100)-50
-		local entity_name = saturn.enemy_spawn_conditions[math.min(#saturn.enemy_spawn_conditions, math.floor(pos_y/2000)+1)]
+		local vel_x = math.random(10)-5
+		local vel_y = math.random(10)-5
+		local vel_z = math.random(10)-5
 		table.insert(saturn.virtual_enemy,{
 			x=pos_x,
 			y=pos_y,
 			z=pos_z,
 			vel_x=vel_x,
 			vel_y=vel_y,
-			vel_z=vel_z,
-			entity_name=entity_name,})
+			vel_z=vel_z,})
 	end
 end
 
-
+local create_guard_shooting_effect = function(shooter_pos, direction_to_target, shooter_size)
+	local x_pos = shooter_pos.x+direction_to_target.x*shooter_size
+	local y_pos = shooter_pos.y+direction_to_target.y*shooter_size
+	local z_pos = shooter_pos.z+direction_to_target.z*shooter_size
+	minetest.add_particle({
+		pos = {x=x_pos, y=y_pos, z=z_pos},
+		velocity = {x=0, y=0, z=0},
+		acceleration = {x=0, y=0, z=0},
+		expirationtime = 0.1,
+		size = 24,
+		collisiondetection = false,
+		vertical = false,
+		texture = "saturn_enemy_guard_shoot_particle.png^[verticalframe:4:"..math.random(4)
+	})
+end
 
 local on_enemy_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir)
    local obj = puncher:get_attach()
@@ -101,6 +131,7 @@ local on_enemy_punch = function(self, puncher, time_from_last_punch, tool_capabi
 		saturn.loaded_enemy_entity[self.uid] = nil
 	end
 	self.remove_at_init = true
+	saturn.enemy_ai_phase = false
    end
 end
 
@@ -121,21 +152,7 @@ object = self.object,
 		entity_name=self.name,}}
 end
 
-local find_target = function(self_pos)
-    local objs = minetest.env:get_objects_inside_radius(self_pos, enemy_player_tracking_range)
-    for k, obj in pairs(objs) do
-	local lua_entity = obj:get_luaentity()
-	if lua_entity then
-	    if lua_entity.name == "saturn:spaceship" and not lua_entity.is_escape_pod then
-		local is_clear, node_pos = minetest.line_of_sight(self_pos, obj:getpos(), 2)
-		if is_clear then
-		    return obj
-		end
-	    end
-	end
-    end
-    return nil
-end
+local find_target = saturn.find_target
 
 local find_closest_target = function(pos, self_pos)
     local objs = minetest.env:get_objects_inside_radius(pos, enemy_player_tracking_range)
@@ -245,12 +262,22 @@ local on_enemy_step = function(self, dtime)
 	    update_loaded_entity_list(self)
     	    saturn.enemy_ai_phase = true
 	    self.unlock_ai_next_tick = true
-	    self.target = find_target(self_pos)
+	    self.target = find_target(self_pos, false)
 	    self.next_player_detect = 20
 	else
 	    self.next_player_detect = npt
 	end
     end
+end
+
+local get_distance_to_mothership = function(self_pos)
+    for _indx,ss in ipairs(saturn.enemy_space_station) do
+	if saturn.is_inside_aabb(self_pos,ss.minp,ss.maxp) then
+	    local distance_to_mothership = vector.distance(self_pos, ss)
+	    return distance_to_mothership, ss
+	end
+    end
+    return 0, self_pos
 end
 
 local on_guard_step = function(self, dtime)
@@ -276,8 +303,7 @@ local on_guard_step = function(self, dtime)
 	    	local distance_to_target = vector.length(vector_to_target)
 	    	local direction_to_target = vector.divide(vector_to_target,distance_to_target)
 	    	local realtive_to_target_speed = vector.subtract(self_velocity,target_velocity)
-		local ess = saturn.enemy_space_station
-	    	local distance_to_mothership = vector.distance(self_pos, ess)
+	    	local distance_to_mothership, ess = get_distance_to_mothership(self_pos)
 		if distance_to_mothership > 32 then
 		    local acceleration_v = vector.multiply(vector.normalize(vector.subtract(ess,self_pos)),self.acceleration)
 		    self.object:setacceleration(acceleration_v)
@@ -315,7 +341,7 @@ local on_guard_step = function(self, dtime)
 					minetest.remove_node(node_pos)
 				end
 			    end
-			    create_shooting_effect(self_pos, direction_to_target, 2)
+			    create_guard_shooting_effect(self_pos, direction_to_target, 2)
 			end
 		    end
 		end
@@ -327,8 +353,7 @@ local on_guard_step = function(self, dtime)
 	    self.target = nil
 	end
     else
-	local ess = saturn.enemy_space_station
-    	local distance_to_mothership = vector.distance(self_pos, ess)
+    	local distance_to_mothership, ess = get_distance_to_mothership(self_pos)
 	if distance_to_mothership > 32 then
 	    local acceleration_v = vector.multiply(vector.normalize(vector.subtract(ess,self_pos)),self.acceleration)
 	    self.object:setacceleration(acceleration_v)
@@ -339,7 +364,12 @@ local on_guard_step = function(self, dtime)
     if npt < 0 and not saturn.enemy_ai_phase then
     	saturn.enemy_ai_phase = true
 	self.unlock_ai_next_tick = true
-	self.target = find_closest_target(saturn.enemy_space_station, self_pos)
+	for _indx,ss in ipairs(saturn.enemy_space_station) do
+	    if saturn.is_inside_aabb(self_pos,ss.minp,ss.maxp) then
+		self.target = find_closest_target(ss, self_pos)
+		break
+	    end
+	end
         self.next_player_detect = 20
     else
 	self.next_player_detect = npt
@@ -387,7 +417,7 @@ local register_enemy = function(name, properties, ring_elevation_level)
 		on_activate=_on_activate,
 	}
 	minetest.register_entity(name, enemy)
-	table.insert(saturn.enemy_spawn_conditions,ring_elevation_level, name)
+	saturn.enemy_spawn_conditions[ring_elevation_level] = name
 end
 
 local register_enemy_guard = function(name, properties)
@@ -404,7 +434,7 @@ local register_enemy_guard = function(name, properties)
 		age = 0,
 		next_attack_timer = 0.2,
 		next_player_detect = 0.2,
-		acceleration = 0.8,
+		acceleration = 2.8,
 		target = nil,
 		unlock_ai_next_tick = false,
 		on_punch = on_enemy_punch,
@@ -424,7 +454,7 @@ register_enemy("saturn:enemy_01", {
 	loot_modifications_scale = 1.0,
 	damage = 25,
 	}, 
-	1)
+	0)
 
 register_enemy("saturn:enemy_02", {
 	hp_max = 300,
@@ -434,38 +464,16 @@ register_enemy("saturn:enemy_02", {
 	loot_modifications_scale = 1.5,
 	damage = 100,
 	},
-	2)
+	800)
 
 register_enemy_guard("saturn:enemy_guard_01", {
-	hp_max = 300,
+	hp_max = 1300,
 	textures = {"saturn_enemy_guard.png"},
 	mesh = "saturn_enemy_guard_01.b3d",
 	loot_level = 2,
 	loot_modifications_scale = 2,
-	damage = 100,
+	damage = 600,
 	})
-
-minetest.register_chatcommand("en_pos_thr", {
-	params = "threshold",
-	description = "debug_enemy_pos_dump_threshold",
-	privs = {server = true},
-	func = function(name, param)
-		saturn.debug_enemy_pos_dump_threshold = tonumber(param)
-		return true, ("%d threshold set")
-			:format(param)
-	end,
-})
-
-
-minetest.register_chatcommand("peaceful_mode", {
-	params = "boolean",
-	description = "debug_enemy_pos_dump_threshold",
-	privs = {server = true},
-	func = function(name, param)
-		saturn.peaceful_mode = minetest.is_yes(param)
-		return true, ("peaceful mode is "..tostring(saturn.peaceful_mode))
-	end,
-})
 
 local box_slope = { --This 9 lines taken from "moreblocks" mod by Calinou and contributors without any changes. Source: https://github.com/kaeza/calinou_mods/tree/master/moreblocks
 	type = "fixed",
@@ -492,7 +500,11 @@ minetest.register_node("saturn:enemy_mothership_core", {
 		end
 	end,
 	on_destruct = function(pos)
-		saturn.enemy_space_station.is_destroyed = true
+	    for _indx,ess in ipairs(saturn.enemy_space_station) do
+		if saturn.is_inside_aabb(pos,ess.minp,ess.maxp) then
+			ess.is_destroyed = true
+		end
+	    end
 	end,
 	toughness = 800,
 })

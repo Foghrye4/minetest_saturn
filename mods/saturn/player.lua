@@ -20,7 +20,9 @@ local function define_player_inventory_slots(player, start_hull)
     local forcefield_generator_slots = hull_stats.forcefield_generator_slots
     local special_equipment_slots = hull_stats.special_equipment_slots
     player_inv:set_size("ship_hull", 1)
-    player_inv:set_size("hangar", 6)
+    for i = 1, saturn.NUMBER_OF_SPACE_STATIONS do
+	player_inv:set_size("hangar"..i, 6)
+    end
     remove_unfitted_items_to_hold(player_inv, "engine", engine_slots)
     remove_unfitted_items_to_hold(player_inv, "power_generator", power_generator_slots)
     remove_unfitted_items_to_hold(player_inv, "droid", droid_slots)
@@ -75,6 +77,10 @@ local function apply_cargo(player, new_carried_weight, new_carried_volume)
 	ship_lua['volume']=new_carried_volume
 	player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
 end
+
+saturn.calculate_carried_weight = calculate_carried_weight
+saturn.calculate_carried_volume = calculate_carried_volume
+saturn.apply_cargo = apply_cargo
 
 local function apply_modificator_to_ship_safe(ship_lua, modificator_key, value)
 	if ship_lua.total_modificators[modificator_key] then
@@ -133,7 +139,7 @@ local function refresh_hull(player)
 				if metadata then
 					for modificator_key,value in pairs(metadata) do
 						if ship_lua.hull_modificators[modificator_key] then
-							ship_lua.hull_modificators[modificator_key] = hull_modificators[modificator_key] + value
+							ship_lua.hull_modificators[modificator_key] = ship_lua.hull_modificators[modificator_key] + value
 						else
 							ship_lua.hull_modificators[modificator_key] = value
 						end
@@ -164,7 +170,7 @@ local function refresh_traction(player)
 						end
 						for modificator_key,value in pairs(metadata) do
 							if ship_lua.engine_modificators[modificator_key] then
-								ship_lua.engine_modificators[modificator_key] = engine_modificators[modificator_key] + value
+								ship_lua.engine_modificators[modificator_key] = ship_lua.engine_modificators[modificator_key] + value
 							else
 								ship_lua.engine_modificators[modificator_key] = value
 							end
@@ -199,7 +205,7 @@ local function refresh_forcefield(player)
 						end
 						for modificator_key,value in pairs(metadata) do
 							if ship_lua.forcefield_modificators[modificator_key] then
-								ship_lua.forcefield_modificators[modificator_key] = forcefield_modificators[modificator_key] + value
+								ship_lua.forcefield_modificators[modificator_key] = ship_lua.forcefield_modificators[modificator_key] + value
 							else
 								ship_lua.forcefield_modificators[modificator_key] = value
 							end
@@ -234,7 +240,7 @@ local function refresh_radar(player)
 						end
 						for modificator_key,value in pairs(metadata) do
 							if ship_lua.radar_modificators[modificator_key] then
-								ship_lua.radar_modificators[modificator_key] = radar_modificators[modificator_key] + value
+								ship_lua.radar_modificators[modificator_key] = ship_lua.radar_modificators[modificator_key] + value
 							else
 								ship_lua.radar_modificators[modificator_key] = value
 							end
@@ -264,7 +270,7 @@ local function refresh_power(player)
 					if metadata then
 						for modificator_key,value in pairs(metadata) do
 							if ship_lua.power_generator_modificators[modificator_key] then
-								ship_lua.power_generator_modificators[modificator_key] = power_generator_modificators[modificator_key] + value
+								ship_lua.power_generator_modificators[modificator_key] = ship_lua.power_generator_modificators[modificator_key] + value
 							else
 								ship_lua.power_generator_modificators[modificator_key] = value
 							end
@@ -276,6 +282,41 @@ local function refresh_power(player)
 	end
     end
     ship_lua['generated_power']=generated_power
+end
+
+local function refresh_droid(player)
+    local ship_lua = player:get_attach():get_luaentity()
+    ship_lua.droid_modificators = {}
+    local droid_efficiency = 0 
+    local droid_consumed_power = 0 
+    if player:get_inventory():get_size("droid") > 0 then
+	for listpos,stack in pairs(player:get_inventory():get_list("droid")) do
+		if stack ~= nil and not stack:is_empty() then
+			local stats = saturn.get_item_stats(stack:get_name())
+			if stats then
+				if stats['droid_efficiency'] and stats['rated_power'] then
+					droid_efficiency = droid_efficiency + stats['droid_efficiency']
+					droid_consumed_power = droid_consumed_power + stats['rated_power']
+					local metadata = minetest.deserialize(stack:get_metadata())
+					if metadata then
+						if metadata['rated_power'] then
+							droid_consumed_power = droid_consumed_power + metadata['rated_power']
+						end
+						for modificator_key,value in pairs(metadata) do
+							if ship_lua.engine_modificators[modificator_key] then
+								ship_lua.engine_modificators[modificator_key] = ship_lua.engine_modificators[modificator_key] + value
+							else
+								ship_lua.engine_modificators[modificator_key] = value
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+    end
+    ship_lua['droid_efficiency']=droid_efficiency
+    ship_lua['droid_consumed_power']=droid_consumed_power
 end
 
 local refresh_ship_equipment = function(player, list_to)
@@ -292,21 +333,22 @@ local refresh_ship_equipment = function(player, list_to)
 	if list_to == "engine" or list_to == "any" then
 		refresh_traction(player)
 	end
+	if list_to == "droid" or list_to == "any" then
+		refresh_droid(player)
+	end
 	if list_to == "radar" or list_to == "any" then
 		refresh_radar(player)
 	end
 	local ship_lua = player:get_attach():get_luaentity()
 	apply_modificators(ship_lua)
-	local generated_power_bonus = 0
-	if ship_lua.total_modificators['generated_power'] then
-		generated_power_bonus = ship_lua.total_modificators['generated_power']
-	end
-	ship_lua['free_power'] = ship_lua['generated_power'] + generated_power_bonus - ship_lua['engine_consumed_power'] - ship_lua['droid_consumed_power'] - ship_lua['radar_consumed_power'] - ship_lua['forcefield_generator_consumed_power'] - ship_lua['special_equipment_consumed_power']
+	ship_lua['free_power'] = ship_lua['generated_power'] + (ship_lua.total_modificators['generated_power'] or 0) - ship_lua['engine_consumed_power'] - ship_lua['droid_consumed_power'] - ship_lua['radar_consumed_power'] - ship_lua['forcefield_generator_consumed_power'] - ship_lua['special_equipment_consumed_power']
     	if ship_lua['free_power'] > 0 and ship_lua['radar_range'] > 0 then
 	    saturn.radars[player:get_player_name()] = {obj = player:get_attach(), radius = ship_lua['radar_range'] + (ship_lua.total_modificators['radar_range'] or 0)}
 	end
 	player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
 end
+
+saturn.refresh_ship_equipment = refresh_ship_equipment
 
 local hud_health_energy_bar_frame_definition = {
 		hud_elem_type = "image",
@@ -430,13 +472,14 @@ local attach_player_to_ship = function(player, ship_lua)
 	ship_lua.driver = player
 	ship_lua.driver_name = player:get_player_name()
 	saturn.refresh_health_hud(player)
-	if saturn.players_info[name] == nil then
+	if not saturn.players_info[name] then
 	    saturn.players_info[name] = {}
 	    if minetest.setting_get("creative_mode") then
 		    saturn.players_info[name]['money'] = 2147483648
 	    else
 		    saturn.players_info[name]['money'] = 100
 	    end
+	    saturn.players_info[name]['postman_rating'] = 1
 	    local start_hull = ItemStack("saturn:basic_ship_hull")
 	    define_player_inventory_slots(player, start_hull)
 	    give_initial_stuff(player, start_hull)
@@ -449,32 +492,39 @@ end
 local create_new_player = function(player)
     local name = player:get_player_name()
     local ship = minetest.add_entity(player:getpos(), "saturn:spaceship")
-    ship:set_armor_groups({immortal=1})
-    local ship_lua = ship:get_luaentity()
-    ship_lua.driver_name = name
-    attach_player_to_ship(player, ship_lua)
+    if ship then
+    	ship:set_armor_groups({immortal=1})
+    	local ship_lua = ship:get_luaentity()
+    	ship_lua.driver_name = name
+    	attach_player_to_ship(player, ship_lua)
+    else
+	minetest.after(10, saturn.restore_missing_ship, player)
+    end
 end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
 	local name = player:get_player_name()
+	local ship_lua = player:get_attach():get_luaentity()
 	if fields.tabs or fields.ii_return then
 		if player:get_attach() then
-			local ship_lua = player:get_attach():get_luaentity()
 			local tab = ship_lua['current_gui_tab']
 			if fields.tabs then
 				tab = tonumber(fields.tabs)
 			end
 			ship_lua['current_gui_tab'] = tab
 			if formname == "saturn:space_station" then
-				minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab))
+				minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, ship_lua['last_ss']))
 			else
 				player:set_inventory_formspec(saturn.get_player_inventory_formspec(player, tab))
 			end
 		end
 	elseif fields.repair then
 		saturn.repair_player_inventory_and_get_price(player, true)
-		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, 2))
+		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, ship_lua['current_gui_tab'], ship_lua['last_ss']))
 		saturn.refresh_health_hud(player)
+	elseif fields.deliver then
+		saturn.deliver_package_and_get_reward(ship_lua['last_ss'], player, true)
+		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, ship_lua['current_gui_tab'], ship_lua['last_ss']))
 	elseif fields.abandon_ship then
 		local inv = player:get_inventory()
 		for list_name,list in pairs(inv:get_lists()) do
@@ -489,7 +539,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		inv:set_stack("ship_hull", 1, saturn:get_escape_pod())
 	elseif fields.quit then
 		if player:get_attach() then
-			local ship_lua = player:get_attach():get_luaentity()
 			ship_lua['is_node_gui_opened'] = false
 		end
 	else
@@ -498,10 +547,18 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			if match == 1 and item_stack_location then
 				local item_stack_location_data = string.split(item_stack_location, "+", false, -1, false)
 				local inventory_type = item_stack_location_data[1]
-				local inventory_name = item_stack_location_data[2]
+				local inventory_name_or_pos = item_stack_location_data[2]
 				local inventory_list_name = item_stack_location_data[3]
 				local inventory_slot_number = tonumber(item_stack_location_data[4])
-				local inventory = minetest.get_inventory({type=inventory_type, name=inventory_name})
+				local inventory
+				if inventory_type == "nodemeta" then
+					inventory = minetest.get_inventory({type=inventory_type, pos=minetest.string_to_pos(inventory_name_or_pos)})
+					if not inventory then
+						error("Calling inventory failed for "..item_stack_location)
+					end
+				else
+					inventory = minetest.get_inventory({type=inventory_type, name=inventory_name_or_pos})
+				end
 				local item_stack = inventory:get_stack(inventory_list_name, inventory_slot_number)
 				if not item_stack:is_empty() then
 					if formname == "saturn:space_station" then
@@ -550,6 +607,7 @@ local spaceship = {
 	volume = 0,
 	free_space = 0,
 	traction = 0,
+	droid_efficiency = 0,
 	radar_range = 0,
 	forcefield_protection = 0,
 	generated_power = 0,
@@ -752,6 +810,27 @@ function spaceship:on_step(dtime)
 					end
 				end
 			end
+			local hull = inv:get_stack("ship_hull", 1)
+			local hull_stats = saturn.get_item_stats(hull:get_name())
+	    		if inv:get_size("droid") > 0 and self['free_power'] > 0 and hull:get_wear() > 0 then
+				local droid_repair_rate = math.floor((self['droid_efficiency'] + (self.total_modificators['droid_efficiency'] or 0)) * saturn.MAX_ITEM_WEAR / hull_stats['max_wear'])
+				if droid_repair_rate > 0 then
+					hull:add_wear(-droid_repair_rate)
+					inv:set_stack("ship_hull", 1, hull)
+					saturn.refresh_health_hud(self.driver)
+				end
+				for listpos,stack in pairs(inv:get_list("droid")) do
+					if stack ~= nil then
+						local stats = saturn.get_item_stats(stack:get_name())
+						if stats then
+							if stats['droid_efficiency'] then
+								stack:add_wear(saturn.MAX_ITEM_WEAR / stats['max_wear'])
+								inv:set_stack("droid", listpos, stack)
+							end
+						end
+					end
+				end
+			end
 		end
 		self.one_second_timer = one_second_timer
 		if is_engine_working and self.engine_sound_handler == nil then
@@ -788,10 +867,10 @@ function spaceship:on_step(dtime)
 			end
 		end
 		self.lastpos={x=pos.x, y=pos.y, z=pos.z}
-		if pos.y > saturn.player_pos_y_max_reached + 1 then
+		if math.abs(pos.y) > saturn.player_pos_y_max_reached + 1 then
 			saturn.player_ship_ref = self.object
-			saturn.player_pos_y_max_reached = pos.y
-		elseif pos.y < 400 and self.object == saturn.player_ship_ref then
+			saturn.player_pos_y_max_reached = math.abs(pos.y)
+		elseif pos.y < 1000 and self.object == saturn.player_ship_ref then
 			saturn.player_ship_ref = nil
 		end
 	elseif self.driver_name and self.driver_name ~= "" then
@@ -838,6 +917,12 @@ end
 
 minetest.register_entity("saturn:spaceship", spaceship)
 
+saturn.restore_missing_ship = function(player)
+    if not player:get_attach() then
+	create_new_player(player)
+    end
+end
+
 minetest.register_on_joinplayer(function(player)
 	local name = player:get_player_name()
         player:set_sky({r=0, g=0, b=0, a=0}, "skybox", skybox)
@@ -865,7 +950,7 @@ minetest.register_on_joinplayer(function(player)
 	if flb_pos then
 		minetest.forceload_block(flb_pos)
 	end
-
+	minetest.after(10, saturn.restore_missing_ship, player)
 end)
 
 minetest.register_on_leaveplayer(function(player)
@@ -879,27 +964,29 @@ minetest.register_on_leaveplayer(function(player)
 	end
 end)
 
-minetest.register_on_player_inventory_add_item(function(player, list_to, slot, stack)
-    if player:get_attach() then
-	local name = player:get_player_name()
-	local ship_lua = player:get_attach():get_luaentity()
-	local new_carried_weight = ship_lua['weight'] + saturn.get_item_weight(list_to, stack) * stack:get_count()
-	local new_carried_volume = ship_lua['volume'] + saturn.get_item_volume(list_to, stack) * stack:get_count()
-	local hull = player:get_inventory():get_stack("ship_hull", 1)
-	local hull_volume = ship_lua['free_space']
-	refresh_ship_equipment(player, list_to)
-	apply_cargo(player,new_carried_weight, new_carried_volume)
-	if list_to ~= "ship_hull" and new_carried_volume > hull_volume then
+if minetest.register_on_player_inventory_add_item then
+
+   minetest.register_on_player_inventory_add_item(function(player, list_to, slot, stack)
+    	if player:get_attach() then
+	    local name = player:get_player_name()
+	    local ship_lua = player:get_attach():get_luaentity()
+	    local new_carried_weight = ship_lua['weight'] + saturn.get_item_weight(list_to, stack) * stack:get_count()
+	    local new_carried_volume = ship_lua['volume'] + saturn.get_item_volume(list_to, stack) * stack:get_count()
+	    local hull = player:get_inventory():get_stack("ship_hull", 1)
+	    local hull_volume = ship_lua['free_space']
+	    refresh_ship_equipment(player, list_to)
+	    apply_cargo(player,new_carried_weight, new_carried_volume)
+	    if list_to ~= "ship_hull" and new_carried_volume > hull_volume then
 		minetest.sound_play("saturn_whoosh", {to_player = name})
 		saturn.throw_item(stack, player:get_attach(), player:getpos())
 		player:get_inventory():remove_item(list_to, stack)
-	end
-    end
-end)
+	    end
+    	end
+    end)
 
-minetest.register_on_player_inventory_change_item(function(player, list_to, slot, old_item, new_item)
-    if player:get_attach() then
-	if old_item:get_name() ~= new_item:get_name() then
+    minetest.register_on_player_inventory_change_item(function(player, list_to, slot, old_item, new_item)
+    	if player:get_attach() then
+	    if old_item:get_name() ~= new_item:get_name() then
 		local name = player:get_player_name()
 		local ship_lua = player:get_attach():get_luaentity()
 		local new_carried_weight = ship_lua['weight'] + saturn.get_item_weight(list_to, new_item) * new_item:get_count() - saturn.get_item_weight(list_to, old_item) * old_item:get_count()
@@ -911,21 +998,22 @@ minetest.register_on_player_inventory_change_item(function(player, list_to, slot
 			saturn.throw_item(new_item, player:get_attach(), player:getpos())
 			player:get_inventory():remove_item(list_to, new_item)
 		end
+	    end
+    	end
+    end)
+
+    minetest.register_on_player_inventory_remove_item(function(player, list_from, stack)
+    	if player:get_attach() then
+	    local name = player:get_player_name()
+	    local ship_lua = player:get_attach():get_luaentity()
+	    local new_carried_weight = ship_lua['weight'] - saturn.get_item_weight(list_from, stack) * stack:get_count()
+	    local new_carried_volume = ship_lua['volume'] - saturn.get_item_volume(list_from, stack) * stack:get_count()
+	    refresh_ship_equipment(player, list_from)
+	    apply_cargo(player,new_carried_weight, new_carried_volume)
 	end
-    end
-end)
+    end)
 
-minetest.register_on_player_inventory_remove_item(function(player, list_from, stack)
-    if player:get_attach() then
-	local name = player:get_player_name()
-	local ship_lua = player:get_attach():get_luaentity()
-	local new_carried_weight = ship_lua['weight'] - saturn.get_item_weight(list_from, stack) * stack:get_count()
-	local new_carried_volume = ship_lua['volume'] - saturn.get_item_volume(list_from, stack) * stack:get_count()
-	refresh_ship_equipment(player, list_from)
-	apply_cargo(player,new_carried_weight, new_carried_volume)
-    end
-end)
-
+end
 -- The hand
 minetest.register_item(":", {
 	type = "none",
@@ -937,53 +1025,4 @@ minetest.register_item(":", {
 		groupcaps = {},
 		damage_groups = {},
 	}
-})
-
-minetest.register_chatcommand("saturn_tpme", {
-	params = "pos",
-	description = "teleport to destination",
-	privs = {server = true},
-	func = function(name, param)
-		local player = minetest.get_player_by_name(name)
-		local ship = player:get_attach()
-		local pos = minetest.string_to_pos(param)
-		if ship then
-			ship:moveto(pos,false)
-		end
-		player:moveto(pos,false)
-		return true, "teleported"
-	end,
-})
-
-minetest.register_chatcommand("saturn_tpme_rel", {
-	params = "pos",
-	description = "teleport destination relatively",
-	privs = {server = true},
-	func = function(name, param)
-		local player = minetest.get_player_by_name(name)
-		local ship = player:get_attach()
-		local pos = minetest.string_to_pos(param)
-		local ppos = player:getpos() 
-		pos = vector.add(ppos,pos)
-		if ship then
-			ship:moveto(pos,false)
-		end
-		player:moveto(pos,false)
-		return true, "teleported"
-	end,
-})
-
-minetest.register_chatcommand("saturn_tpme_to_enemy", {
-	params = "",
-	description = "teleport to enemy base",
-	privs = {server = true},
-	func = function(name, param)
-		local player = minetest.get_player_by_name(name)
-		local ship = player:get_attach()
-		if ship then
-			ship:moveto(saturn.enemy_space_station,false)
-		end
-		player:moveto(saturn.enemy_space_station,false)
-		return true, "teleported"
-	end,
 })

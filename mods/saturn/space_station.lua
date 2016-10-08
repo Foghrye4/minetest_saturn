@@ -1,3 +1,48 @@
+saturn.NUMBER_OF_SPACE_STATIONS = 5
+
+saturn.save_human_space_station = function()
+    local file = io.open(minetest.get_worldpath().."/saturn_human_space_station", "w")
+    file:write(minetest.serialize(saturn.human_space_station))
+    file:close()
+end
+
+saturn.load_human_space_station = function()
+    local file = io.open(minetest.get_worldpath().."/saturn_human_space_station", "r")
+    if file ~= nil then
+	local text = file:read("*a")
+        file:close()
+	if text and text ~= "" then
+	    saturn.human_space_station = minetest.deserialize(text)
+	end
+    end
+end
+
+saturn.load_human_space_station()
+
+if not saturn.human_space_station then
+    saturn.human_space_station = {}
+    for i = 1, saturn.NUMBER_OF_SPACE_STATIONS do
+	local x = (math.random(7750) - 3875) * (i-1)
+	local y = saturn.get_pseudogaussian_random(-200, 10)
+	local z = (math.random(7750) - 3875) * (i-1)
+	local minp = {
+		x = x - 58,
+		y = y - 100,
+		z = z - 58,}
+	local maxp = {
+		x = x + 58,
+		y = y + 109,
+		z = z + 58,}
+	saturn.human_space_station[i] = {x = x,
+		y = y,
+		z = z,
+		minp = minp,
+		maxp = maxp,
+		index = i,
+		}
+    end
+end
+
 local get_item_repair_price = function(stack)
 	local stats = saturn.get_item_stats(stack:get_name())
 	if stats then
@@ -14,7 +59,7 @@ saturn.repair_player_inventory_and_get_price = function(player, _do_repair)
 	local inv = player:get_inventory()
 	for list_name,list in pairs(inv:get_lists()) do
 		for listpos,stack in pairs(list) do
-			if stack ~= nil then
+			if stack ~= nil and not stack:is_empty() then
 				local repair_price = get_item_repair_price(stack)
 				total_repair_price = total_repair_price + repair_price
 				if do_repair then
@@ -33,100 +78,300 @@ saturn.repair_player_inventory_and_get_price = function(player, _do_repair)
 	return total_repair_price
 end
 
-saturn.get_space_station_formspec = function(player, tab)
+saturn.deliver_package_and_get_reward = function(ss_index, player, do_deliver)
 	local name = player:get_player_name()
-	local default_formspec = 
-		"label[0,3.75;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
-		"tabheader[0,0;tabs;Equipment market,Ore market,Microfactory market,Hangar and ship;"..tab..";true;false]"..
-		saturn.default_slot_color..
-		"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
-		"list[detached:space_station;buying_up_spot;7,4.5;1,1;]"..
-		"label[0,4.1;"..minetest.formspec_escape("Hangar: ").."]"..
-		"list[current_player;hangar;0,4.5;6,1;]"
-	for ix = 1, 6 do
-		default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+hangar+"..ix..";]"
+	local total_delivery_reward = 0
+	local inv = player:get_inventory()
+	for list_name,list in pairs(inv:get_lists()) do
+		for listpos,stack in pairs(list) do
+			if stack ~= nil and not stack:is_empty() and stack:get_name() == "saturn:mail_package" then
+				local metadata = minetest.deserialize(stack:get_metadata())
+				if metadata and metadata.delivery_address == ss_index then
+					local punctuality = math.min(1, (metadata.delivery_term * 2 - (minetest.get_gametime() - metadata.sending_date))/metadata.delivery_term)
+					local reward =  math.max(10, metadata.reward * punctuality)
+					total_delivery_reward = total_delivery_reward + reward
+					if do_deliver then
+						local postman_rating = saturn.players_info[name]['postman_rating']
+						if punctuality >= 1 then
+							saturn.players_info[name]['postman_rating'] = postman_rating + 2
+						end
+						local money = saturn.players_info[name]['money']
+						saturn.players_info[name]['money'] = money + reward
+						stack:clear()
+						inv:set_stack(list_name, listpos, stack)
+					end
+				end
+			end
+		end
 	end
-	if tab == 1 then
-		default_formspec = "size[8,7]"..
-		default_formspec..
-		"list[detached:space_station;market;0,0;8,4;]"..
-		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
-		for ix = 1, 8 do
-			for iy = 0, 3 do
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+market+"..(ix+8*iy)..";]"
-			end
+	return total_delivery_reward
+end
+
+local get_market_formspec = function(player, market_name, ss_index)
+	local player_name = player:get_player_name()
+	local default_formspec = "size[9,7]"..
+	"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[player_name]['money']).." Cr.]"..
+	"list[detached:space_station"..ss_index..";"..market_name..";0,0;8,4;]"..
+	"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
+	"list[detached:space_station"..ss_index..";buying_up_spot;7,4.5;1,1;]"..
+	"label[0,4.1;"..minetest.formspec_escape("Hangar: ").."]"..
+	"list[current_player;hangar"..ss_index..";0,4.5;6,1;]"..
+	"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
+	for ix = 1, 8 do
+		for iy = 0, 3 do
+			default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station"..ss_index.."+"..market_name.."+"..(ix+8*iy)..";]"
 		end
-	elseif tab == 2 then
-		default_formspec = "size[8,7]"..
-		default_formspec..
-		"list[detached:space_station;ore_market;0,0;8,4;]"..
-		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
-		for ix = 1, 8 do
-			for iy = 0, 3 do
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+ore_market+"..(ix+8*iy)..";]"
-			end
-		end
-	elseif tab == 3 then
-		default_formspec = "size[8,7]"..
-		default_formspec..
-		"list[detached:space_station;microfactory_market;0,0;8,4;]"..
-		"button[0,6;8,1;repair;Repair all player equipment. Price: "..string.format ('%4.0f',saturn.repair_player_inventory_and_get_price(player, false)).." Cr.]"
-		for ix = 1, 8 do
-			for iy = 0, 3 do
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_detached+space_station+microfactory_market+"..(ix+8*iy)..";]"
-			end
-		end
-	else
-		default_formspec = "size[8,9.75]"..
-		default_formspec..
-		saturn.get_ship_equipment_formspec(player)..
-		saturn.get_main_inventory_formspec(player,5.75)
+	end
+	for ix = 1, 6 do
+		default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..player_name.."+hangar"..ss_index.."+"..ix..";]"
 	end
 	return default_formspec
 end
 
-saturn.space_station_inv = minetest.create_detached_inventory("space_station", {
-    allow_move = function(inv, from_list, from_index, to_list, to_index, count, player) 
-	return 0
-    end,
-    allow_put = function(inv, listname, index, stack, player) 
-	return stack:get_count()
-    end,
-    allow_take = function(inv, listname, index, stack, player) 
-	if saturn.players_info[player:get_player_name()]['money'] < saturn.get_item_price(stack:get_name()) * stack:get_count() then
-		return 0
-	else
-		return stack:get_count()
-	end
-    end,
-    on_move = function(inv, from_list, from_index, to_list, to_index, count, player) 
-    end,
-    on_put = function(inv, listname, index, stack, player) 
-	local add_money = saturn.get_item_price(stack:get_name()) * stack:get_count() * 0.7
-	saturn.players_info[player:get_player_name()]['money'] = saturn.players_info[player:get_player_name()]['money'] + add_money
-	saturn.space_station_inv:remove_item("buying_up_spot", stack)
-	local tab = 1
-	if player:get_attach() then
-		local ship_lua = player:get_attach():get_luaentity()
-		tab = ship_lua['current_gui_tab']
-	end
-	minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab))
-    end,
-    on_take = function(inv, listname, index, stack, player)
-	saturn.players_info[player:get_player_name()]['money'] = saturn.players_info[player:get_player_name()]['money'] - saturn.get_item_price(stack:get_name()) * stack:get_count()
-	local tab = 1
-	if player:get_attach() then
-		local ship_lua = player:get_attach():get_luaentity()
-		tab = ship_lua['current_gui_tab']
-	end
-	minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab))
-    end,
-})
+saturn.get_space_station_formspec = function(player, tab, ss_index)
+	local name = player:get_player_name()
+	local default_formspec = "tabheader[0,0;tabs;Equipment market,Ore market,Microfactory market,Intelligence info,Post office,Hangar and ship;"..tab..";true;false]"..
+		saturn.default_slot_color
+	if tab == 1 then
+		default_formspec = get_market_formspec(player, "market", ss_index) .. default_formspec
+	elseif tab == 2 then
+		default_formspec = get_market_formspec(player, "ore_market", ss_index) .. default_formspec
+	elseif tab == 3 then
+		default_formspec = get_market_formspec(player, "microfactory_market", ss_index) .. default_formspec
+	elseif tab == 4 then
+		default_formspec = "size[9,4.2]"..
+		default_formspec..
+		"label[0,0;Amount of enemy ships near saturn:]"..		
+		"label[5,0;"..#saturn.virtual_enemy.."]"
+		local row = -0.3
+		for _indx,ss in ipairs(saturn.enemy_space_station) do
+			row = row + 0.6
+			local ss_x = math.floor(ss.x/10)*10
+			local ss_y = math.floor(ss.y/10)*10
+			local ss_z = math.floor(ss.z/10)*10
+			default_formspec = default_formspec..
+			"label[0,"..row..";Enemy motherships near saturn at:]"..
+			"label[5,"..row..";("..ss_x..","..ss_y..","..ss_z..")]"..
+			"label[0,"..(row+0.3)..";Is deactivated:]"..
+			"label[5,"..(row+0.3)..";"..tostring(ss.is_destroyed or "false").."]"
+		end
+		row = row + 0.6
+		for _indx,ss in ipairs(saturn.human_space_station) do
+			row = row + 0.3
+			local ss_x = math.floor(ss.x/10)*10
+			local ss_y = math.floor(ss.y/10)*10
+			local ss_z = math.floor(ss.z/10)*10
+			default_formspec = default_formspec..
+			"label[0,"..row..";Human stations near saturn at:]"..
+			"label[5,"..row..";("..ss_x..","..ss_y..","..ss_z..")]"
+		end
+	elseif tab == 5 then
+		default_formspec = "size[9,9.75]"..
+		default_formspec..
+		"list[detached:space_station"..ss_index..";post_office;0,0;1,4;]"..
+		"label[0,4.0;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
+		"label[2,4.0;".."Current time: "..saturn.date_to_string(minetest.get_gametime()).." (hh:mm:ss)]"..
+		"label[0,4.3;By taking any of those packages you accept terms and conditions of delivery.]"..
+		"label[0,4.6;Your postman rating: "..(saturn.players_info[name]['postman_rating']).."]"..
+		saturn.get_main_inventory_formspec(player,5.75)
+		local delivery_reward = saturn.deliver_package_and_get_reward(ss_index, player, false)
+		if delivery_reward > 0 then
+			default_formspec = default_formspec..
+			"button[0,4.9;8,1;deliver;Deliver packages and get reward. Reward: "..string.format ('%d',delivery_reward).." Cr.]"
+		end
+		local row = 0
+		local inv = saturn.space_station_inv[ss_index]
+		for listpos,stack in pairs(inv:get_list("post_office")) do
+			local metadata = minetest.deserialize(stack:get_metadata())
+			if metadata and metadata.sending_date then
+				local dst = metadata.delivery_address
+				local ss = saturn.human_space_station[dst]
+				local ss_x = math.floor(ss.x/10)*10
+				local ss_y = math.floor(ss.y/10)*10
+				local ss_z = math.floor(ss.z/10)*10
+				default_formspec = default_formspec..
+				"label[1,"..row..";Sending date:]"..
+				"label[3,"..row..";"..saturn.date_to_string(metadata.sending_date).."]"..
+				"label[1,"..(row+0.3)..";Destination address:]"..
+				"label[3,"..(row+0.3)..";SS#"..dst.." ("..ss_x..","..ss_y..","..ss_z..")]"..
+				"label[1,"..(row+0.6)..";Reward:]"..
+				"label[3,"..(row+0.6)..";"..string.format('%d', metadata.reward).." Cr. (10 Cr. in case delivery term was overdue by 100%)]"..
+				"label[5,"..row..";Urgency class:]"..
+				"label[7,"..row..";"..metadata.urgency_class.."]"..
+				"label[5,"..(row+0.3)..";Deliver before:]"..
+				"label[7,"..(row+0.3)..";"..saturn.date_to_string(metadata.sending_date + metadata.delivery_term).."]"
+			end
+			row = row + 1
+		end
 
-saturn.space_station_inv:set_size("market", 8 * 4)
-saturn.space_station_inv:set_size("ore_market", 8 * 4)
-saturn.space_station_inv:set_size("microfactory_market", 8 * 4)
-saturn.space_station_inv:set_size("buying_up_spot", 1)
+	else
+		default_formspec = "size[9,9.75]"..
+		default_formspec..
+		"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
+		saturn.get_ship_equipment_formspec(player)..
+		"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
+		"list[current_player;hangar"..ss_index..";0,4.5;6,1;]"..
+		"list[detached:space_station"..ss_index..";buying_up_spot;7,4.5;1,1;]"..
+		saturn.get_main_inventory_formspec(player,5.75)
+		for ix = 1, 6 do
+			default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+hangar"..ss_index.."+"..ix..";]"
+		end
+	end
+	return default_formspec
+end
+
+local generate_random_market_item = function()
+	local item_name = saturn.market_items[math.random(#saturn.market_items)]
+	return ItemStack(item_name.." "..minetest.registered_items[item_name].stack_max)
+end
+
+local generate_random_ore_market_item = function()
+	local item_name = saturn.ore_market_items[math.random(#saturn.ore_market_items)]
+	return ItemStack(item_name.." 99")
+end
+
+local generate_random_microfactory_market_item = function()
+	local item_name = saturn.microfactory_market_items[math.random(#saturn.microfactory_market_items)]
+	return ItemStack(item_name)
+end
+
+local generate_random_mail_package = function(ss_index)
+	local package = ItemStack("saturn:mail_package")
+	local delivery_address
+	if ss_index == 1 then
+		delivery_address = math.random(2,saturn.NUMBER_OF_SPACE_STATIONS)
+	elseif ss_index == saturn.NUMBER_OF_SPACE_STATIONS then
+		delivery_address = math.random(1,saturn.NUMBER_OF_SPACE_STATIONS-1)
+	elseif math.random() < ss_index/saturn.NUMBER_OF_SPACE_STATIONS then
+		delivery_address = math.random(1,ss_index-1)
+	else
+		delivery_address = math.random(ss_index+1,saturn.NUMBER_OF_SPACE_STATIONS)
+	end
+	local sending_date = minetest.get_gametime()
+	local delivery_distance = vector.distance(saturn.human_space_station[ss_index],saturn.human_space_station[delivery_address])
+	local urgency_class = math.random(10)
+	local delivery_term = delivery_distance / (10 + urgency_class * urgency_class) + 100
+	local reward = urgency_class * urgency_class * delivery_distance / 10
+	package:set_metadata(minetest.serialize({
+		delivery_address = delivery_address,
+		sending_date = sending_date,
+		delivery_term = delivery_term,
+		urgency_class = urgency_class,
+		reward = reward,}))
+	return package
+end
+
+local get_oldest_mail_package_slot = function(inv)
+	local last_sending_date = -1
+	local last_slot = 1
+	for listpos,stack in pairs(inv:get_list("post_office")) do
+		if stack ~= nil and not stack:is_empty() then
+			local metadata = minetest.deserialize(stack:get_metadata())
+			if metadata and metadata.sending_date then
+				if last_sending_date == -1 or last_sending_date > metadata.sending_date then
+					last_sending_date = metadata.sending_date
+					last_slot = listpos
+				end
+			end
+		end
+	end
+	return last_slot
+end
+
+saturn.space_station_inv = {}
+local update_space_station = function(ss_index)
+	local inv = saturn.space_station_inv[ss_index]
+	local stack = generate_random_market_item()
+	if inv:room_for_item("market", stack) then
+		inv:add_item("market", stack)
+	else
+		inv:set_stack("market", math.random(8*4), stack)
+	end
+	stack = generate_random_ore_market_item()
+	if inv:room_for_item("ore_market", stack) then
+		inv:add_item("ore_market", stack)
+	else
+		inv:set_stack("ore_market", math.random(8*4), stack)
+	end
+	stack = generate_random_microfactory_market_item()
+	if inv:room_for_item("microfactory_market", stack) then
+		inv:add_item("microfactory_market", stack)
+	else
+		inv:set_stack("microfactory_market", math.random(8*4), stack)
+	end
+	if minetest.get_gametime() then
+		stack = generate_random_mail_package(ss_index)
+		if inv:room_for_item("post_office", stack) then
+			inv:add_item("post_office", stack)
+		else
+			inv:set_stack("post_office", get_oldest_mail_package_slot(inv), stack)
+		end
+	end
+end
+saturn.update_space_station = update_space_station
+
+for i=1,saturn.NUMBER_OF_SPACE_STATIONS do
+    local inv = minetest.create_detached_inventory("space_station"..i, {
+    	allow_move = function(inv, from_list, from_index, to_list, to_index, count, player) 
+	    return 0
+	end,
+    	allow_put = function(inv, listname, index, stack, player) 
+		if listname == "post_office" then
+			return 0
+		end
+		return stack:get_count()
+    	end,
+    	allow_take = function(inv, listname, index, stack, player) 
+		if saturn.players_info[player:get_player_name()]['money'] < saturn.get_item_price(stack:get_name()) * stack:get_count() then
+			return 0
+		else
+			if listname == "post_office" then
+				local metadata = minetest.deserialize(stack:get_metadata())
+				if metadata and metadata.sending_date then
+					if saturn.players_info[player:get_player_name()]['postman_rating'] < metadata.urgency_class then
+						return 0
+					end
+				end
+			end
+			return stack:get_count()
+		end
+  	  end,
+ 	on_move = function(inv, from_list, from_index, to_list, to_index, count, player) 
+ 	end,
+ 	on_put = function(inv, listname, index, stack, player) 
+		local add_money = saturn.get_item_price(stack:get_name()) * stack:get_count() * 0.7
+		saturn.players_info[player:get_player_name()]['money'] = saturn.players_info[player:get_player_name()]['money'] + add_money
+		inv:remove_item("buying_up_spot", stack)
+		local tab = 1
+		if player:get_attach() then
+			local ship_lua = player:get_attach():get_luaentity()
+			tab = ship_lua['current_gui_tab']
+		end
+		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, i))
+	end,
+	on_take = function(inv, listname, index, stack, player)
+		saturn.players_info[player:get_player_name()]['money'] = saturn.players_info[player:get_player_name()]['money'] - saturn.get_item_price(stack:get_name()) * stack:get_count()
+		if listname == "post_office" then
+			saturn.players_info[player:get_player_name()]['postman_rating'] = saturn.players_info[player:get_player_name()]['postman_rating'] - 1
+		end
+		local tab = 1
+		if player:get_attach() then
+			local ship_lua = player:get_attach():get_luaentity()
+			tab = ship_lua['current_gui_tab']
+		end
+		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, i))
+	end,
+    })
+    inv:set_size("market", 8 * 4)
+    inv:set_size("ore_market", 8 * 4)
+    inv:set_size("microfactory_market", 8 * 4)
+    inv:set_size("buying_up_spot", 1)
+    inv:set_size("post_office", 4)
+    saturn.space_station_inv[i] = inv
+    for i1=1,4 do
+        update_space_station(i)
+    end
+end
 
 local box_slope = { --This 9 lines taken from "moreblocks" mod by Calinou and contributors without any changes. Source: https://github.com/kaeza/calinou_mods/tree/master/moreblocks
 	type = "fixed",
@@ -204,78 +449,19 @@ minetest.register_node("saturn:space_station_hatch", {
 	tiles = {"saturn_space_station_hatch.png"},
 	groups = {space_station = 1},
 	on_rightclick = function(pos, node, player)
-		if player:get_attach() then
+	    for _indx,ss in ipairs(saturn.human_space_station) do
+		if saturn.is_inside_aabb(pos,ss.minp,ss.maxp) then
+		    if player:get_attach() then
+			minetest.show_formspec(
+				player:get_player_name(),
+				"saturn:space_station",
+				saturn.get_space_station_formspec(player, 1, _indx))
 			local ship_lua = player:get_attach():get_luaentity()
 			ship_lua['current_gui_tab']=1
+			ship_lua['last_ss']=ss.index
+		    end
+		    return
 		end
-		minetest.show_formspec(
-			player:get_player_name(),
-			"saturn:space_station",
-			saturn.get_space_station_formspec(player, 1)
-		)
-	end,
-})
-
-local generate_random_market_item = function()
-	local item_name = saturn.market_items[math.random(#saturn.market_items)]
-	return ItemStack(item_name.." "..minetest.registered_items[item_name].stack_max)
-end
-
-local generate_random_ore_market_item = function()
-	local item_name = saturn.ore_market_items[math.random(#saturn.ore_market_items)]
-	return ItemStack(item_name.." 99")
-end
-
-local generate_random_microfactory_market_item = function()
-	local item_name = saturn.microfactory_market_items[math.random(#saturn.microfactory_market_items)]
-	return ItemStack(item_name)
-end
-
-local update_space_station_market = function()
-	local stack = generate_random_market_item()
-	if saturn.space_station_inv:room_for_item("market", stack) then
-		saturn.space_station_inv:add_item("market", stack)
-	else
-		saturn.space_station_inv:set_stack("market",math.random(8*4), stack)
-	end
-	local stack = generate_random_ore_market_item()
-	if saturn.space_station_inv:room_for_item("ore_market", stack) then
-		saturn.space_station_inv:add_item("ore_market", stack)
-	else
-		saturn.space_station_inv:set_stack("ore_market",math.random(8*4), stack)
-	end
-	local stack = generate_random_microfactory_market_item()
-	if saturn.space_station_inv:room_for_item("microfactory_market", stack) then
-		saturn.space_station_inv:add_item("microfactory_market", stack)
-	else
-		saturn.space_station_inv:set_stack("microfactory_market",math.random(8*4), stack)
-	end
-end
-
-saturn.update_space_station_market = update_space_station_market
-
-for i=0, 8*4 do
-	update_space_station_market()
-end
-
-minetest.register_chatcommand("create_schematic", {
-	params = "filename pos1 pos2",
-	description = "Create schematic",
-	privs = {server = true},
-	func = function(name, param)
-		local params_list = string.split(param, " ", false, -1, false)
-		minetest.create_schematic(minetest.string_to_pos(params_list[2]), minetest.string_to_pos(params_list[3]), {}, minetest.get_modpath("saturn").."/schematics/"..params_list[1])
-		return true, "schematic created"
-	end,
-})
-
-minetest.register_chatcommand("place_schematic", {
-	params = "filename pos1",
-	description = "Create schematic",
-	privs = {server = true},
-	func = function(name, param)
-		local params_list = string.split(param, " ", false, -1, false)
-		minetest.place_schematic(minetest.string_to_pos(params_list[2]), minetest.get_modpath("saturn").."/schematics/"..params_list[1], 0, {}, true)
-		return true, "schematic placed"
+	    end
 	end,
 })

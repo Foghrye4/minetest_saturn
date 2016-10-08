@@ -125,7 +125,6 @@ register_node_with_stats("saturn:world_anchor_protector", {
 	         "saturn_anchor_side.png", "saturn_anchor_side.png",
 	         "saturn_anchor_side.png", "saturn_anchor_side.png"},
 	groups = {cracky = 3},
-	legacy_mineral = true,
 	after_place_node = function(pos, placer, itemstack, pointed_thing)
 		local old_pos = saturn.players_info[placer:get_player_name()]['forceload_pos']
 		if old_pos then

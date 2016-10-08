@@ -1,4 +1,4 @@
--- Version 0.005
+-- Version 0.006
 -- Foghrye4
 saturn = rawget(_G, "saturn") or {}
 
@@ -17,6 +17,8 @@ dofile(modpath .. "/microfactories.lua")
 dofile(modpath .. "/items.lua")
 dofile(modpath .. "/space_station.lua")
 dofile(modpath .. "/player.lua")
+dofile(modpath .. "/missing_api_gag.lua")
 dofile(modpath .. "/enemy.lua")
 dofile(modpath .. "/mapgen.lua")
+dofile(modpath .. "/chat_commands.lua")
 

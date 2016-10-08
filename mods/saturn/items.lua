@@ -9,16 +9,18 @@ local default_enemy_item_possible_modifications = {
 		cooldown = {-0.1,0.1},
 		generated_power = {-10,10},
 		forcefield_protection = {-0.1,0.1},
+		droid_efficiency = {-0.1,0.1},
 	}
 
 local default_enemy_generator_item_possible_modifications = {
-		weight = {-10,10}, -- Given values define a scale of pseudogaussian random value
+		weight = {-10,10},
 		volume = {-1,1},
 		traction = {-1000,1000},
 		damage = {-1,1},
 		cooldown = {-0.1,0.1},
 		generated_power = {-10,10},
 		forcefield_protection = {-0.1,0.1},
+		droid_efficiency = {-0.1,0.1},
 	}
 
 
@@ -68,7 +70,7 @@ register_wearable_item("saturn:basic_ship_hull",{
 	free_space = 100,
 	price = 300,
 	max_wear = 100, -- out of 65535
-	engine_slots = 1,
+	engine_slots = 2,
 	power_generator_slots = 1,
 	droid_slots = 0,
 	radar_slots = 0,
@@ -81,6 +83,7 @@ register_wearable_item("saturn:basic_ship_hull",{
 		visual = "mesh",
 		visual_size = {x=10, y=10},
 	},
+	equipment_slot = "ship_hull",
 })
 
 register_wearable_item("saturn:basic_ship_hull_me",{
@@ -95,7 +98,7 @@ register_wearable_item("saturn:basic_ship_hull_me",{
 	free_space = 200,
 	price = 8000,
 	max_wear = 400, -- out of 65535
-	engine_slots = 1,
+	engine_slots = 2,
 	power_generator_slots = 1,
 	droid_slots = 0,
 	radar_slots = 1,
@@ -108,6 +111,35 @@ register_wearable_item("saturn:basic_ship_hull_me",{
 		visual = "mesh",
 		visual_size = {x=10, y=10},
 	},
+	equipment_slot = "ship_hull",
+})
+
+register_wearable_item("saturn:overkiller_hull",{
+		description = "Overkiller hull",
+		inventory_image = "saturn_overkiller_hull.png",
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+	weight = 1200000,
+	volume = 8000,
+	free_space = 2000,
+	price = 2000000,
+	max_wear = 65535, -- out of 65535
+	engine_slots = 8,
+	power_generator_slots = 4,
+	droid_slots = 4,
+	radar_slots = 1,
+	forcefield_generator_slots = 1,
+	special_equipment_slots = 4,
+	is_market_item = true,
+	player_visual = {
+		mesh = "saturn_overkiller_ship.b3d",
+		textures = {"saturn_overkiller_ship.png"},
+		visual = "mesh",
+		visual_size = {x=10, y=10},
+	},
+	equipment_slot = "ship_hull",
 })
 
 register_wearable_item("saturn:escape_pod",{
@@ -134,6 +166,7 @@ register_wearable_item("saturn:escape_pod",{
 		visual = "mesh",
 		visual_size = {x=10, y=10},
 	},
+	equipment_slot = "ship_hull",
 })
 
 -- Retractors
@@ -322,7 +355,7 @@ register_wearable_item("saturn:basic_retractor",{
 	volume = 1,
 	price = 100,
 	cooldown = 0.5,
-	action_range = 10,
+	action_range = 16,
 	max_wear = 2000, -- out of 65535
 	rated_power = 1, -- MW, megawatts
 	is_market_item = true,
@@ -350,7 +383,7 @@ register_wearable_item("saturn:retractor_scr2",{
 	volume = 1.5,
 	price = 200,
 	cooldown = 0.5,
-	action_range = 16,
+	action_range = 32,
 	max_wear = 2000, -- out of 65535
 	rated_power = 2, -- MW, megawatts
 	is_market_item = true,
@@ -373,6 +406,7 @@ register_wearable_item("saturn:ionic_engine",{
 	max_wear = 50000, -- out of 65535
 	rated_power = 4, -- MW, megawatts
 	is_market_item = true,
+	equipment_slot = "engine",
 })
 
 register_wearable_item("saturn:gravitational_engine",{
@@ -390,6 +424,7 @@ register_wearable_item("saturn:gravitational_engine",{
 	max_wear = 50000, -- out of 65535
 	rated_power = 4, -- MW, megawatts
 	is_market_item = true,
+	equipment_slot = "engine",
 })
 
 register_wearable_item("saturn:enemy_engine",{
@@ -409,6 +444,27 @@ register_wearable_item("saturn:enemy_engine",{
 	is_enemy_item = true,
 	possible_modifications = default_enemy_item_possible_modifications,
 	loot_level = 1,
+	equipment_slot = "engine",
+})
+
+-- Droids
+
+register_wearable_item("saturn:basic_droid",{
+		description = "Basic droid",
+		inventory_image = "saturn_basic_droid.png",
+	        range = 0.0,
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+	weight = 440,
+	volume = 5,
+	price = 1000,
+	droid_efficiency = 1,
+	max_wear = 2000, -- out of 65535
+	rated_power = 4, -- MW, megawatts
+	is_market_item = true,
+	equipment_slot = "droid",
 })
 
 -- Radars
@@ -428,6 +484,7 @@ register_wearable_item("saturn:short_range_radar",{
 	max_wear = 20000, -- out of 65535
 	rated_power = 4, -- MW, megawatts
 	is_market_item = true,
+	equipment_slot = "radar",
 })
 
 -- Power generators
@@ -446,6 +503,7 @@ register_wearable_item("saturn:mmfnr", {
 	max_wear = 60000,
 	price = 100,
 	is_market_item = true,
+	equipment_slot = "power_generator",
 })
 
 register_wearable_item("saturn:mmfnr2", {
@@ -462,6 +520,7 @@ register_wearable_item("saturn:mmfnr2", {
 	max_wear = 60000,
 	price = 1600,
 	is_market_item = true,
+	equipment_slot = "power_generator",
 })
 
 register_wearable_item("saturn:enemy_power_generator", {
@@ -480,6 +539,7 @@ register_wearable_item("saturn:enemy_power_generator", {
 	is_enemy_item = true,
 	possible_modifications = default_enemy_generator_item_possible_modifications,
 	loot_level = 1,
+	equipment_slot = "power_generator",
 })
 
 -- Forcefield generators
@@ -499,6 +559,7 @@ register_wearable_item("saturn:forcefield_generator", {
 	max_wear = 2000,
 	price = 1000,
 	is_market_item = true,
+	equipment_slot = "forcefield_generator",
 })
 
 register_wearable_item("saturn:enemy_forcefield_generator", {
@@ -518,6 +579,7 @@ register_wearable_item("saturn:enemy_forcefield_generator", {
 	is_enemy_item = true,
 	possible_modifications = default_enemy_item_possible_modifications,
 	loot_level = 2,
+	equipment_slot = "forcefield_generator",
 })
 
 -- Weapons
@@ -761,6 +823,29 @@ register_wearable_item("saturn:cdbcemw",{
 	create_hit_effect = saturn.create_hit_effect,
 })
 
+register_wearable_item("saturn:uhv_railgun",{
+		description = "Ultra high velocity railgun",
+		inventory_image = "saturn_uhv_railgun.png",
+	        range = 0.0,
+		tool_capabilities = {
+		        max_drop_level = 0,
+		        groupcaps = {},
+    		},
+		on_use = weapon_on_use,
+	weight = 4000,
+	damage = 2500,
+	cooldown = 50, -- seconds
+	use_ammo_type = "railgun_ammo",
+	use_ammo_amount = 1,
+	volume = 25,
+	price = 200000,
+	max_wear = 500, -- out of 65535
+	rated_power = 120, -- MW, megawatts
+	is_market_item = true,
+	sound_spec_single_shot = {name="saturn_railgun_shot", gain=0.5},
+	create_hit_effect = saturn.create_railgun_hit_effect,
+})
+
 register_wearable_item("saturn:enemy_particle_emitter",{
 		description = "Enemy particle emitter",
 		inventory_image = "saturn_enemy_particle_emitter.png",
@@ -920,6 +1005,31 @@ register_craft_item("saturn:gauss_mo_permalloy_with_depleted_uranium_core_bullet
 	gauss_ammo = true,
 	damage_modificator = 1.5,
 })
+
+register_craft_item("saturn:railgun_aluminium_uhmwpe_ammo",{
+		description = "Railgun UHMWPE bullets with aluminium conductive part",
+		inventory_image = "saturn_railgun_aluminium_uhmwpe_ammo.png",
+		stack_max = 999,
+	weight = 4,
+	volume = 0.0001,
+	price = 1,
+	is_market_item = true,
+	railgun_ammo = true,
+	damage_modificator = 1.0,
+})
+
+-- Misc.
+
+register_craft_item("saturn:mail_package",{
+		description = "Mail package",
+		inventory_image = "saturn_mail_package.png",
+		stack_max = 1,
+	weight = 100,
+	volume = 0.5,
+	price = 0,
+})
+
+-- Resources
 
 register_craft_item("saturn:clean_water",{
 		description = "Clean water",
