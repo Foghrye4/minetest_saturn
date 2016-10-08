@@ -1,5 +1,0 @@
-0.001 - Initial release.
-0.002 - New look of spaceship slots (colours).
-0.003 - Microfactories. Gauss MG.
-0.004 - Better item info GUI look. Virtual enemy instead of random spawn. Radars. Torches.
-0.005 - Structures of human base and enemy mothership
