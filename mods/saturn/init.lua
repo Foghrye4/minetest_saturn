@@ -1,4 +1,4 @@
--- Version 0.006
+-- Version 0.007
 -- Foghrye4
 saturn = rawget(_G, "saturn") or {}
 

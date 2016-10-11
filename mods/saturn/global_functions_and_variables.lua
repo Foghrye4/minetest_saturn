@@ -37,7 +37,7 @@ local getVectorPitchAngle = saturn.get_vector_pitch_angle
 local getVectorYawAngle = saturn.get_vector_yaw_angle
 
 local find_target = function(self_pos, ignore_line_of_sight)
-    local objs = minetest.env:get_objects_inside_radius(self_pos, 128)
+    local objs = minetest.get_objects_inside_radius(self_pos, 128)
     for k, obj in pairs(objs) do
 	local lua_entity = obj:get_luaentity()
 	if lua_entity then
@@ -59,8 +59,8 @@ saturn.get_onscreen_coords_of_object = function(player, object) --highly inaccur
 	local look_x=look_dir.x
 	local look_y=look_dir.y
 	local look_z=look_dir.z
-	local look_yaw = player:get_look_yaw()
-	local look_pitch = player:get_look_pitch()
+	local look_yaw = player:get_look_horizontal()
+	local look_pitch = player:get_look_vertical()
 	local player_pos = player:getpos()
 	local object_pos = nil
 	if type(object) == "table" then
@@ -440,10 +440,10 @@ local on_throwed_step = function(self, dtime) -- Taken from PilzAdam Throwing mo
     self.age=self.age+dtime
     self.collision_timer = self.collision_timer +dtime
     local pos = self.object:getpos()
-    local node = minetest.env:get_node(pos)
+    local node = minetest:get_node(pos)
     local self_velocity = self.object:getvelocity()
     if self.collision_timer > 2.0 then
-		local objs = minetest.env:get_objects_inside_radius({x=pos.x,y=pos.y,z=pos.z}, math.min(2,self.age))
+		local objs = minetest:get_objects_inside_radius({x=pos.x,y=pos.y,z=pos.z}, math.min(2,self.age))
 		for k, obj in pairs(objs) do
 			local collided = obj:get_luaentity()
 			if collided then
@@ -579,18 +579,27 @@ end
 
 local PROJECTION_XZ = 1
 local PROJECTION_XY = 2
+local scale_map = {1,2,4,8,16,32,64,128}
 
 local get_map_scale_bar_formspec = function(scale)
     local x_pos = 0.2
-    local y_pos = 1
+    local y_pos = 4
     local bar_length = 8
-    local formspec = "image["..x_pos..","..y_pos..";0.5,0.5;saturn_gui_icons.png^[verticalframe:8:1]"..
-	"image["..x_pos..","..(y_pos+bar_length*0.5+1)..";0.5,0.5;saturn_gui_icons.png^[verticalframe:8:2]"
+    local formspec = "image_button["..x_pos..","..y_pos..
+";0.5,0.5;"..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:1")..";set_map_scale_"..math.min(scale+1,bar_length)..";;false;false;"
+..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:1").."]"..
+	"image_button["..x_pos..","..(y_pos+bar_length*0.35+0.35)..
+";0.5,0.5;"..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:2")..";set_map_scale_"..math.max(scale-1,1)..";;false;false;"
+..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:2").."]"
     for i=1,bar_length do
 	if i == scale then
-		formspec = formspec .. "image["..x_pos..","..(y_pos+i*0.5+0.5)..";0.5,0.5;saturn_gui_icons.png^[verticalframe:8:6]"
+		formspec = formspec .. "image_button["..x_pos..","..(y_pos+(bar_length-i+1)*0.35)..
+";0.5,0.5;"..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:6")..";set_map_scale_"..i..";;false;false;"
+..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:6").."]"
 	else
-		formspec = formspec .. "image["..x_pos..","..(y_pos+i*0.5+0.5)..";0.5,0.5;saturn_gui_icons.png^[verticalframe:8:5]"
+		formspec = formspec .. "image_button["..x_pos..","..(y_pos+(bar_length-i+1)*0.35)..
+";0.5,0.5;"..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:5")..";set_map_scale_"..i..";;false;false;"
+..minetest.formspec_escape("saturn_gui_icons.png^[verticalframe:8:5").."]"
 	end
     end
     return formspec
@@ -598,14 +607,29 @@ end
 
 
 local get_map_mark_formspec = function(scale, projection, pos, player_pos, title, width, height)
-    local x_pos = (pos.x + 31000) * width / 62000
-    local y_pos = (31000 - pos.z) * height / 62000
+    local scale_multiplier = scale_map[scale]
+    local x_pos = ((pos.x - player_pos.x) * scale_multiplier + 31000) * width / 62000
+    local y_pos = ((player_pos.z - pos.z) * scale_multiplier + 31000) * height / 62000
     if projection == PROJECTION_XY then
-	y_pos = (31000 - pos.y) * form_height / 62000
+	y_pos = ((player_pos.y - pos.y) * scale_multiplier + 31000) * height / 62000
     end
-    return "image["..x_pos..","..(y_pos+1)..";0.5,0.5;saturn_arrows_and_frame_blue.png^[verticalframe:10:9]"..
-	"label["..x_pos..","..(y_pos+1)..";"..title..format_pos("%d",pos).."]"
+    if x_pos > 0 and x_pos < width and y_pos > 0 and y_pos < height then
+	return "image["..x_pos..","..(y_pos+1)..";0.5,0.5;saturn_arrows_and_frame_blue.png^[verticalframe:10:9]"..
+"label["..x_pos..","..(y_pos+1)..";"..title..format_pos("%d",pos).."]"
+    else
+	return ""
+    end
 end
+
+local get_color_formspec_frame = function(x,y,w,h,color,thickness)
+	local gap = 0.2
+	return "box["..(x-thickness+gap)..","..(y-thickness)..";"..(w+thickness-0.2-gap*2)..","..(thickness)..";"..color.."]"..
+"box["..(x+w-0.2)..","..(y-thickness+gap)..";"..(thickness)..","..(h+thickness-0.2-gap*2)..";"..color.."]"..
+"box["..(x+gap)..","..(y+h-0.2)..";"..(w+thickness-0.2-gap*2)..","..(thickness)..";"..color.."]"..
+"box["..(x-thickness)..","..(y+gap)..";"..(thickness)..","..(h+thickness-0.2-gap*2)..";"..color.."]"
+end
+
+saturn.get_color_formspec_frame = get_color_formspec_frame
 
 local get_map_formspec = function(scale, projection, player)
     local form_width = 9
@@ -615,7 +639,9 @@ local get_map_formspec = function(scale, projection, player)
 	coordinate_arrows = "saturn_map_zero_xy_mark.png"
     end
     local formspec = get_map_mark_formspec(scale, projection, player:getpos(), player:getpos(), "YOU", form_width, form_height)..
-	"image["..(form_width/2)..","..(form_height/2)..";1,1;"..coordinate_arrows.."]"
+	"image["..(form_width - 1.5)..","..(form_height - 1.5)..";1,1;"..coordinate_arrows.."]"..
+	get_map_scale_bar_formspec(scale)..
+	get_color_formspec_frame(0,0,form_width,form_height,"#041",0.05)
     for _,ss in ipairs(saturn.human_space_station) do
 	formspec = formspec .. get_map_mark_formspec(scale, projection, ss, player:getpos(), "SS#".._, form_width, form_height)
     end
@@ -623,14 +649,6 @@ local get_map_formspec = function(scale, projection, player)
 	formspec = formspec .. get_map_mark_formspec(scale, projection, ess, player:getpos(), "EMS#".._, form_width, form_height)
     end
     return formspec
-end
-
-saturn.get_color_formspec_frame = function(x,y,w,h,color,thickness)
-	local gap = 0.2
-	return "box["..(x-thickness+gap)..","..(y-thickness)..";"..(w+thickness-0.2-gap*2)..","..(thickness)..";"..color.."]"..
-"box["..(x+w-0.2)..","..(y-thickness+gap)..";"..(thickness)..","..(h+thickness-0.2-gap*2)..";"..color.."]"..
-"box["..(x+gap)..","..(y+h-0.2)..";"..(w+thickness-0.2-gap*2)..","..(thickness)..";"..color.."]"..
-"box["..(x-thickness)..","..(y+gap)..";"..(thickness)..","..(h+thickness-0.2-gap*2)..";"..color.."]"
 end
 
 local get_formspec_label_with_bg_color = function(x,y,w,h,color,text)
@@ -750,7 +768,11 @@ saturn.get_player_inventory_formspec = function(player, tab)
 			return "size[8,8.6]"..default_formspec..saturn.get_ship_equipment_formspec(player)..
 				saturn.get_main_inventory_formspec(player,4.25)
 		elseif tab == 3 then
-			return "size[9,9]"..default_formspec..get_map_formspec(1, 1, player)
+			local ship = player:get_attach()
+			local ship_lua = ship:get_luaentity()
+			local map_scale = ship_lua['map_scale'] or 1
+			local map_projection = ship_lua['map_projection'] or 1
+			return "size[9,8.6]"..default_formspec..get_map_formspec(map_scale, map_projection, player)
 		end
 	end
 	return default_formspec
@@ -844,7 +866,7 @@ saturn.throw_item = function(stack, ship, pos)
 		end
 	end
 	local start_pos = {x=pos.x+velocity.x, y=pos.y+velocity.y, z=pos.z+velocity.z}
-	local obj = minetest.env:add_entity(start_pos, "saturn:throwable_item_entity")
+	local obj = minetest:add_entity(start_pos, "saturn:throwable_item_entity")
 	obj:setvelocity(velocity)
 	obj:get_luaentity():set_item(stack:to_string())
 end

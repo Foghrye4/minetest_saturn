@@ -155,7 +155,7 @@ end
 local find_target = saturn.find_target
 
 local find_closest_target = function(pos, self_pos)
-    local objs = minetest.env:get_objects_inside_radius(pos, enemy_player_tracking_range)
+    local objs = minetest:get_objects_inside_radius(pos, enemy_player_tracking_range)
     local target = nil
     local latest_distance_sqrd = enemy_player_tracking_range * enemy_player_tracking_range
     for k, obj in pairs(objs) do

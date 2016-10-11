@@ -443,7 +443,8 @@ local hud_radar_text = {}
 for i=1,8 do
 	hud_radar_shelf[i] = {
 		hud_elem_type = "image",
-		scale = { x=2, y=2 }, 
+		scale = {x=2, y=2}, 
+		size = {x=1, y=1},
 		position = { x=0.5, y=0.5 },
 		text = "null.png",
 		number = 0xFF0000,
@@ -452,8 +453,9 @@ for i=1,8 do
 	}
 	hud_radar_text[i] = {
 		hud_elem_type = "text",
-		scale = { x=2, y=2 }, 
-		position = { x=0.5, y=0.5 },
+		scale = {x=2, y=2}, 
+		size = {x=1, y=1},
+		position = {x=0.5, y=0.5},
 		text = "",
 		number = 0xFF8A00,
 		alignment = {x=0,y=0},
@@ -474,7 +476,7 @@ local attach_player_to_ship = function(player, ship_lua)
 	saturn.refresh_health_hud(player)
 	if not saturn.players_info[name] then
 	    saturn.players_info[name] = {}
-	    if minetest.setting_get("creative_mode") then
+	    if minetest.setting_getbool("creative_mode") then
 		    saturn.players_info[name]['money'] = 2147483648
 	    else
 		    saturn.players_info[name]['money'] = 100
@@ -543,9 +545,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		end
 	else
 		for key,v in pairs(fields) do
-			local item_stack_location, match = string.gsub(key, "^item_info_", "")
-			if match == 1 and item_stack_location then
-				local item_stack_location_data = string.split(item_stack_location, "+", false, -1, false)
+			local parameters_list, match = string.gsub(key, "^item_info_", "")
+			if match == 1 and parameters_list then
+				local item_stack_location_data = string.split(parameters_list, "+", false, -1, false)
 				local inventory_type = item_stack_location_data[1]
 				local inventory_name_or_pos = item_stack_location_data[2]
 				local inventory_list_name = item_stack_location_data[3]
@@ -554,7 +556,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				if inventory_type == "nodemeta" then
 					inventory = minetest.get_inventory({type=inventory_type, pos=minetest.string_to_pos(inventory_name_or_pos)})
 					if not inventory then
-						error("Calling inventory failed for "..item_stack_location)
+						error("Calling inventory failed for "..parameters_list)
 					end
 				else
 					inventory = minetest.get_inventory({type=inventory_type, name=inventory_name_or_pos})
@@ -568,6 +570,12 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					end
 					return true
 				end
+			end
+			parameters_list, match = string.gsub(key, "^set_map_scale_", "")
+			if match == 1 and parameters_list then
+				local scale = tonumber(parameters_list)
+				ship_lua['map_scale'] = scale
+				player:set_inventory_formspec(saturn.get_player_inventory_formspec(player, 3))
 			end
 		end
 	end
@@ -654,8 +662,8 @@ function spaceship:on_step(dtime)
 		local look_x=look_dir.x
 		local look_y=look_dir.y
 		local look_z=look_dir.z
-		local look_yaw = player:get_look_yaw()
-		local look_pitch = player:get_look_pitch()
+		local look_yaw = player:get_look_horizontal()
+		local look_pitch = player:get_look_vertical()
 		local velocity = self.object:getvelocity()
 		local velocity_module = vector.length(velocity)
 		local is_engine_working = false
@@ -848,7 +856,7 @@ function spaceship:on_step(dtime)
 			self.engine_sound_handler = nil
 		end
 		player:hud_change(saturn.hud_relative_velocity_id, "text", "Relative to ring velocity: "..string.format ('%4.2f',velocity_module).." m/s")
-		player:set_bone_position("Head", {x=0,y=1,z=0}, {x=player:get_look_pitch()*180/3.14159,y=0,z=90-look_yaw*180/3.14159})
+		player:set_bone_position("Head", {x=0,y=1,z=0}, {x=player:get_look_vertical()*180/3.14159,y=0,z=90-look_yaw*180/3.14159})
 		local node = minetest.env:get_node(pos)
 		if self.lastpos.x~=nil then
 			if node.name ~= "air" and node.name ~= "saturn:fog" and node.name ~= "ignore" then
