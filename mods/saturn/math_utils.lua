@@ -1,3 +1,7 @@
+if not math.pi then
+	math.pi = 3.141592654
+end
+
 saturn.get_vector_pitch_angle = function(vector)
 	local x=vector.x
 	local y=vector.y

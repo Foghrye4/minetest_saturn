@@ -75,8 +75,8 @@ for ore_name,stats in pairs(saturn.ores) do
 	wherein          = {"saturn:water_ice"},
 	clust_scarcity   = 24*24*24,
 	clust_size       = 35,
-	y_min            = -14900,
-	y_max            = 1000,
+	y_min            = -750,
+	y_max            = 750,
 	noise_threshold = 0,
 	noise_params     = {
 		offset=stats['noise_offset'],
@@ -87,11 +87,74 @@ for ore_name,stats in pairs(saturn.ores) do
 		persist=0.8
 	},
     })
-
 end
 
 local is_inside_aabb = saturn.is_inside_aabb
 local update_space_station_market = saturn.update_space_station_market
+
+local mapgen_chunksize = minetest.setting_get("chunksize")
+
+local mapgen_schematics_map = {}
+
+local hss_filename_prefix = minetest.get_modpath("saturn").."/schematics/splitted/".."human_space_station".."_"
+
+for _,ss in ipairs(saturn.human_space_station) do
+	local minx = math.floor(ss.minp.x/16/mapgen_chunksize)*16*mapgen_chunksize
+	local miny = math.floor(ss.minp.y/16/mapgen_chunksize)*16*mapgen_chunksize
+	local minz = math.floor(ss.minp.z/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxx = math.ceil(ss.maxp.x/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxy = math.ceil(ss.maxp.y/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxz = math.ceil(ss.maxp.z/16/mapgen_chunksize)*16*mapgen_chunksize
+	for ix = minx, maxx, 16*mapgen_chunksize do
+	for iy = miny, maxy, 16*mapgen_chunksize do
+	for iz = minz, maxz, 16*mapgen_chunksize do
+	    local filename = hss_filename_prefix..math.floor((ix-minx)/16/mapgen_chunksize).."_"..math.floor((iy-miny)/16/mapgen_chunksize).."_"..math.floor((iz-minz)/16/mapgen_chunksize)..".mts"
+	    local file = io.open(filename, "r")
+	    if file ~= nil then
+		mapgen_schematics_map[minetest.hash_node_position(vector.new(ix-32,iy-32,iz-32))] = filename
+		file:close()
+	    end
+	end
+	end
+	end
+end
+
+local ess_filename_prefix = minetest.get_modpath("saturn").."/schematics/splitted/".."enemy_mothership".."_"
+
+for _,ess in ipairs(saturn.enemy_space_station) do
+	local minx = math.floor((ess.x-28+32)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local miny = math.floor((ess.y-28+32)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local minz = math.floor((ess.z-28+32)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxx = math.ceil((ess.x+228)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxy = math.ceil((ess.y+28)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxz = math.ceil((ess.z+28)/16/mapgen_chunksize)*16*mapgen_chunksize
+	for ix = minx, maxx, 16*mapgen_chunksize do
+	for iy = miny, maxy, 16*mapgen_chunksize do
+	for iz = minz, maxz, 16*mapgen_chunksize do
+	    local filename = ess_filename_prefix..math.floor((ix-minx)/16/mapgen_chunksize).."_"..math.floor((iy-miny)/16/mapgen_chunksize).."_"..math.floor((iz-minz)/16/mapgen_chunksize)..".mts"
+	    local file = io.open(filename, "r")
+	    if file ~= nil then
+		mapgen_schematics_map[minetest.hash_node_position(vector.new(ix-32,iy-32,iz-32))] = filename
+		file:close()
+	    else
+	    end
+	end
+	end
+	end
+end
+
+
+minetest.register_on_generated(function(minp, maxp, seed)
+    local structure_filename = mapgen_schematics_map[minetest.hash_node_position(minp)]
+    if structure_filename then
+    	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
+	minetest.place_schematic_on_vmanip(vm, minp, structure_filename, 0, {}, true)
+	vm:calc_lighting()
+	vm:write_to_map()
+    end
+end)
+
+--[[
 
 saturn.on_first_generation = true
 
@@ -130,4 +193,4 @@ minetest.register_on_generated(function(minp, maxp, seed)
     end
 end)
 
-saturn.rog = #core.registered_on_generateds
+saturn.rog = #core.registered_on_generateds ]]--

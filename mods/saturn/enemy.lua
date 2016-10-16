@@ -48,12 +48,14 @@ end
 
 saturn.load_enemy_info()
 
+local n_chunksize = minetest.setting_get("chunksize") * 16
+
 if not saturn.enemy_space_station then
     saturn.enemy_space_station = {}
     for i = 1, 2 do
-	local x = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3)
-	local y = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3)
-	local z = math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3)
+	local x = math.floor(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
+	local y = math.floor(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
+	local z = math.floor(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
 	local minp = {
 		x = x - 28 - 128,
 		y = y - 28 - 128,
@@ -155,7 +157,7 @@ end
 local find_target = saturn.find_target
 
 local find_closest_target = function(pos, self_pos)
-    local objs = minetest:get_objects_inside_radius(pos, enemy_player_tracking_range)
+    local objs = minetest.get_objects_inside_radius(pos, enemy_player_tracking_range)
     local target = nil
     local latest_distance_sqrd = enemy_player_tracking_range * enemy_player_tracking_range
     for k, obj in pairs(objs) do
@@ -226,7 +228,9 @@ local on_enemy_step = function(self, dtime)
 	   	end
 	    	local yaw = -getVectorYawAngle(direction_to_target)
 	    	local pitch = -getVectorPitchAngle(direction_to_target)
-	    	self.object:set_bone_position("Head", {x=0,y=1,z=0}, {x=pitch*180/3.14159,y=0,z=yaw*180/3.14159})
+		if yaw==yaw and pitch==pitch then
+		    	self.object:set_bone_position("Head", {x=0,y=1,z=0}, {x=pitch*180/3.14159,y=0,z=yaw*180/3.14159})
+		end
 		local lua_entity = self.target:get_luaentity()
 		if lua_entity then
 		    if lua_entity.is_escape_pod then
@@ -322,7 +326,9 @@ local on_guard_step = function(self, dtime)
 	   	end
 	    	local yaw = -getVectorYawAngle(direction_to_target)
 	    	local pitch = -getVectorPitchAngle(direction_to_target)
-	    	self.object:set_bone_position("Head", {x=0,y=1,z=0}, {x=pitch*180/3.14159,y=0,z=yaw*180/3.14159})
+		if yaw==yaw and pitch==pitch then
+		    	self.object:set_bone_position("Head", {x=0,y=1,z=0}, {x=pitch*180/3.14159,y=0,z=yaw*180/3.14159})
+		end
 		local lua_entity = self.target:get_luaentity()
 		if lua_entity then
 		    if lua_entity.is_escape_pod then
@@ -568,28 +574,6 @@ minetest.register_node("saturn:enemy_mothership_hull_deep", {
 	toughness = 800,
 })
 
-minetest.register_node("saturn:enemy_mothership_hull_slope", {
-	description = "Enemy mothership hull slope",
-	tiles = {"saturn_enemy_mothership_hull_back.png"},
-	drawtype = "mesh",
-	mesh = "saturn_slope_h.obj",
-	groups = {enemy_mothership = 1},
-	paramtype = "light",
-	paramtype2 = "wallmounted",
-	on_use = function(itemstack, user, pointed_thing)
-		if pointed_thing.type == "node" then
-			local old_node = minetest.get_node(pointed_thing.under)
-			if old_node.param2 < 5 then
-				old_node.param2 = old_node.param2 + 1
-			else
-				old_node.param2 = 0
-			end
-			minetest.swap_node(pointed_thing.under, old_node)
-		end
-	end,
-	toughness = 800,
-})
-
 minetest.register_node("saturn:enemy_mothership_inners", {
 	description = "Enemy mothership inners",
 	tiles = {"saturn_enemy_mothership_inners.png",
@@ -718,29 +702,6 @@ minetest.register_node("saturn:enemy_mothership_hull_peak_v", {
 	tiles = {"saturn_enemy_mothership_hull_back.png"},
 	drawtype = "mesh",
 	mesh = "saturn_peak_v.obj",
-	groups = {enemy_mothership = 1},
-	collision_box = box_slope,
-	paramtype = "light",
-	paramtype2 = "wallmounted",
-	on_use = function(itemstack, user, pointed_thing)
-		if pointed_thing.type == "node" then
-			local old_node = minetest.get_node(pointed_thing.under)
-			if old_node.param2 < 5 then
-				old_node.param2 = old_node.param2 + 1
-			else
-				old_node.param2 = 0
-			end
-			minetest.swap_node(pointed_thing.under, old_node)
-		end
-	end,
-	toughness = 800,
-})
-
-minetest.register_node("saturn:enemy_mothership_hull_peak_top", {
-	description = "Enemy mothership hull peak top",
-	tiles = {"saturn_enemy_mothership_hull_back.png"},
-	drawtype = "mesh",
-	mesh = "saturn_peak_top.obj",
 	groups = {enemy_mothership = 1},
 	collision_box = box_slope,
 	paramtype = "light",

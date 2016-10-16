@@ -23,7 +23,7 @@ if not saturn.human_space_station then
     saturn.human_space_station = {}
     for i = 1, saturn.NUMBER_OF_SPACE_STATIONS do
 	local x = (math.random(7750) - 3875) * (i-1)
-	local y = saturn.get_pseudogaussian_random(-200, 10)
+	local y = saturn.get_pseudogaussian_random(-100, 10)
 	local z = (math.random(7750) - 3875) * (i-1)
 	local minp = {
 		x = x - 58,

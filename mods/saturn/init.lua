@@ -1,4 +1,4 @@
--- Version 0.007
+-- Version 0.008
 -- Foghrye4
 saturn = rawget(_G, "saturn") or {}
 
@@ -12,6 +12,7 @@ local modpath = minetest.get_modpath("saturn")
 dofile(modpath .. "/math_utils.lua")
 dofile(modpath .. "/localisation_and_units.lua")
 dofile(modpath .. "/global_functions_and_variables.lua")
+dofile(modpath .. "/gui.lua")
 dofile(modpath .. "/nodes.lua")
 dofile(modpath .. "/microfactories.lua")
 dofile(modpath .. "/items.lua")

@@ -216,7 +216,7 @@ local retractor_on_use = function(stack, player, pointed_thing)
 			p_pos.y = p_pos.y + 1.6
 			local player_look_vec = vector.multiply(player:get_look_dir(),search_area)
 			local abs_player_look = vector.add(p_pos,player_look_vec)
-			local objs = minetest:get_objects_inside_radius(abs_player_look, search_area)
+			local objs = minetest.get_objects_inside_radius(abs_player_look, search_area)
 			local shoot_miss = true
 			for k, obj in pairs(objs) do
 			    local lua_entity = obj:get_luaentity()
@@ -310,7 +310,7 @@ local retractor_on_secondary_use = function(stack, player, pointed_thing)
 	if player:get_attach() then
 		local ship_lua = player:get_attach():get_luaentity()
 		if ship_lua['free_power'] >= rated_power then
-			local objs = minetest:get_objects_inside_radius(vector.add(player:getpos(),player:get_look_dir()), 4)
+			local objs = minetest.get_objects_inside_radius(vector.add(player:getpos(),player:get_look_dir()), 4)
 			for k, obj in pairs(objs) do
 				local lua_entity = obj:get_luaentity()
 				if lua_entity then
@@ -717,7 +717,7 @@ local weapon_on_use = function(stack, player, pointed_thing)
 			end
 			local name = player:get_player_name()
 			local abs_player_look = vector.add(p_pos,player_look_vec)
-			local objs = minetest:get_objects_inside_radius(abs_player_look, search_area)
+			local objs = minetest.get_objects_inside_radius(abs_player_look, search_area)
 			local shoot_miss = true
 			for k, obj in pairs(objs) do
 			    local lua_entity = obj:get_luaentity()

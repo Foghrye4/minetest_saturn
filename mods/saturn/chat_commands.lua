@@ -1,6 +1,6 @@
 minetest.register_chatcommand("saturn_peaceful_mode", {
 	params = "boolean",
-	description = "debug_enemy_pos_dump_threshold",
+	description = "Kill enemies immediatly",
 	privs = {server = true},
 	func = function(name, param)
 		saturn.peaceful_mode = minetest.is_yes(param)
@@ -118,6 +118,31 @@ minetest.register_chatcommand("saturn_create_schematic", {
 		local params_list = string.split(param, " ", false, -1, false)
 		minetest.create_schematic(minetest.string_to_pos(params_list[2]), minetest.string_to_pos(params_list[3]), {}, minetest.get_modpath("saturn").."/schematics/"..params_list[1])
 		return true, "schematic created"
+	end,
+})
+
+local chunksize = minetest.setting_get("chunksize")
+
+minetest.register_chatcommand("saturn_create_splitted_schematic", {
+	params = "filename pos1 pos2",
+	description = "Create schematic",
+	privs = {server = true},
+	func = function(name, param)
+		local params_list = string.split(param, " ", false, -1, false)
+		local pos1 = minetest.string_to_pos(params_list[2])
+		local pos2 = minetest.string_to_pos(params_list[3])
+		local fragments = 0
+		local filename_prefix = minetest.get_modpath("saturn").."/schematics/splitted/"..params_list[1].."_"
+		for ix = pos1.x, pos2.x + 16*chunksize, 16*chunksize do
+		for iy = pos1.y, pos2.y + 16*chunksize, 16*chunksize do
+		for iz = pos1.z, pos2.z + 16*chunksize, 16*chunksize do
+			fragments = fragments + 1
+			local filename = filename_prefix..math.floor((ix-pos1.x)/16/chunksize).."_"..math.floor((iy-pos1.y)/16/chunksize).."_"..math.floor((iz-pos1.z)/16/chunksize)..".mts"
+			minetest.create_schematic(vector.new(ix,iy,iz),vector.new(ix+16*chunksize-1,iy+16*chunksize-1,iz+16*chunksize-1) , {}, filename)
+		end
+		end
+		end
+		return true, "Schematic created. Chunksize: "..chunksize.." Number of fragments: "..fragments
 	end,
 })
 

@@ -463,6 +463,27 @@ for i=1,8 do
 	}
 end
 
+local hud_waypoint_shelf_definition = {
+		hud_elem_type = "image",
+		scale = {x=2, y=2}, 
+		size = {x=1, y=1},
+		position = { x=0.5, y=0.5 },
+		text = "null.png",
+		number = 0xFF0000,
+		alignment = {x=0,y=0},
+		offset = {x=0, y=0},
+}
+
+local hud_waypoint_text_definition = {
+		hud_elem_type = "text",
+		scale = {x=2, y=2}, 
+		size = {x=1, y=1},
+		position = {x=0.5, y=0.5},
+		text = "",
+		number = 0xFF8A00,
+		alignment = {x=0,y=0},
+		offset = {x=0, y=0},
+}
 
 local attach_player_to_ship = function(player, ship_lua)
 	local name = player:get_player_name()
@@ -503,83 +524,6 @@ local create_new_player = function(player)
 	minetest.after(10, saturn.restore_missing_ship, player)
     end
 end
-
-minetest.register_on_player_receive_fields(function(player, formname, fields)
-	local name = player:get_player_name()
-	local ship_lua = player:get_attach():get_luaentity()
-	if fields.tabs or fields.ii_return then
-		if player:get_attach() then
-			local tab = ship_lua['current_gui_tab']
-			if fields.tabs then
-				tab = tonumber(fields.tabs)
-			end
-			ship_lua['current_gui_tab'] = tab
-			if formname == "saturn:space_station" then
-				minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, ship_lua['last_ss']))
-			else
-				player:set_inventory_formspec(saturn.get_player_inventory_formspec(player, tab))
-			end
-		end
-	elseif fields.repair then
-		saturn.repair_player_inventory_and_get_price(player, true)
-		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, ship_lua['current_gui_tab'], ship_lua['last_ss']))
-		saturn.refresh_health_hud(player)
-	elseif fields.deliver then
-		saturn.deliver_package_and_get_reward(ship_lua['last_ss'], player, true)
-		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, ship_lua['current_gui_tab'], ship_lua['last_ss']))
-	elseif fields.abandon_ship then
-		local inv = player:get_inventory()
-		for list_name,list in pairs(inv:get_lists()) do
-			for listpos,stack in pairs(list) do
-				if stack ~= nil and not stack:is_empty() then
-					inv:remove_item(list_name, stack)
-					saturn.throw_item(stack, player:get_attach(), player:getpos())
-				end
-			end
-		end
-		minetest.sound_play("saturn_item_drop", {to_player = name})
-		inv:set_stack("ship_hull", 1, saturn:get_escape_pod())
-	elseif fields.quit then
-		if player:get_attach() then
-			ship_lua['is_node_gui_opened'] = false
-		end
-	else
-		for key,v in pairs(fields) do
-			local parameters_list, match = string.gsub(key, "^item_info_", "")
-			if match == 1 and parameters_list then
-				local item_stack_location_data = string.split(parameters_list, "+", false, -1, false)
-				local inventory_type = item_stack_location_data[1]
-				local inventory_name_or_pos = item_stack_location_data[2]
-				local inventory_list_name = item_stack_location_data[3]
-				local inventory_slot_number = tonumber(item_stack_location_data[4])
-				local inventory
-				if inventory_type == "nodemeta" then
-					inventory = minetest.get_inventory({type=inventory_type, pos=minetest.string_to_pos(inventory_name_or_pos)})
-					if not inventory then
-						error("Calling inventory failed for "..parameters_list)
-					end
-				else
-					inventory = minetest.get_inventory({type=inventory_type, name=inventory_name_or_pos})
-				end
-				local item_stack = inventory:get_stack(inventory_list_name, inventory_slot_number)
-				if not item_stack:is_empty() then
-					if formname == "saturn:space_station" then
-						minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_item_info_formspec(item_stack))
-					else
-						player:set_inventory_formspec(saturn.get_item_info_formspec(item_stack))
-					end
-					return true
-				end
-			end
-			parameters_list, match = string.gsub(key, "^set_map_scale_", "")
-			if match == 1 and parameters_list then
-				local scale = tonumber(parameters_list)
-				ship_lua['map_scale'] = scale
-				player:set_inventory_formspec(saturn.get_player_inventory_formspec(player, 3))
-			end
-		end
-	end
-end)
 
 saturn.load_players()
 
@@ -636,6 +580,7 @@ local spaceship = {
 	special_equipment_modificators = {},
 	current_gui_tab = 1,
 	ignore_cooldown = false,
+	waypoint = nil,
 }
 
 function spaceship:on_step(dtime)
@@ -662,8 +607,18 @@ function spaceship:on_step(dtime)
 		local look_x=look_dir.x
 		local look_y=look_dir.y
 		local look_z=look_dir.z
-		local look_yaw = player:get_look_horizontal()
-		local look_pitch = player:get_look_vertical()
+		local look_horizontal = player:get_look_horizontal()
+		local look_vertical = player:get_look_vertical()
+		if look_horizontal < -math.pi*2 then
+			look_horizontal = -math.pi*2
+		elseif look_horizontal > math.pi*2 or look_horizontal ~= look_horizontal then
+			look_horizontal = math.pi*2
+		end
+		if look_vertical < -math.pi*0.5 then
+			look_vertical = -math.pi*0.5
+		elseif look_vertical > math.pi*0.5 or look_vertical ~= look_vertical then -- Check if NaN
+			look_vertical = math.pi*0.5
+		end
 		local velocity = self.object:getvelocity()
 		local velocity_module = vector.length(velocity)
 		local is_engine_working = false
@@ -707,10 +662,10 @@ function spaceship:on_step(dtime)
 				forward_acceleration=-acceleration_module
 			end
 			local acceleration={
-						x=look_x*forward_acceleration+math.sin(look_yaw)*side_acceleration-look_y*math.cos(look_yaw)*level_acceleration,
-						y=look_y*forward_acceleration+(look_x*look_x+look_z*look_z)*level_acceleration,
-						z=look_z*forward_acceleration-math.cos(look_yaw)*side_acceleration-look_y*math.sin(look_yaw)*level_acceleration
-					}
+				x=look_x*forward_acceleration+math.cos(look_horizontal)*side_acceleration+look_y*math.sin(look_horizontal)*level_acceleration,
+				y=look_y*forward_acceleration+(look_x*look_x+look_z*look_z)*level_acceleration,
+				z=look_z*forward_acceleration+math.sin(look_horizontal)*side_acceleration-look_y*math.cos(look_horizontal)*level_acceleration
+			}
 			self.object:setacceleration(acceleration)
 		end
 		local het = self.hit_effect_timer
@@ -774,6 +729,13 @@ function spaceship:on_step(dtime)
 			else
 				self.radar_object_list = {}
 			end
+		end
+		if self.waypoint then
+			local ocodo = saturn.get_onscreen_coords_of_object(player, self.waypoint)
+			player:hud_change(saturn.hud_waypoint_shelf, "position", ocodo)
+			player:hud_change(saturn.hud_waypoint_shelf, "text", "saturn_arrows_and_frame_blue.png^[verticalframe:10:"..ocodo.frame)
+			player:hud_change(saturn.hud_waypoint_text, "position", ocodo)
+			player:hud_change(saturn.hud_waypoint_text, "text", string.format("%4.1f",vector.distance(pos,self.waypoint)/1000).."km")
 		end
 		local one_second_timer = self.one_second_timer + dtime
 		local inv = player:get_inventory()
@@ -856,7 +818,7 @@ function spaceship:on_step(dtime)
 			self.engine_sound_handler = nil
 		end
 		player:hud_change(saturn.hud_relative_velocity_id, "text", "Relative to ring velocity: "..string.format ('%4.2f',velocity_module).." m/s")
-		player:set_bone_position("Head", {x=0,y=1,z=0}, {x=player:get_look_vertical()*180/3.14159,y=0,z=90-look_yaw*180/3.14159})
+		player:set_bone_position("Head", {x=0,y=1,z=0}, {x=-look_vertical*180/math.pi,y=0,z=-look_horizontal*180/math.pi})
 		local node = minetest.env:get_node(pos)
 		if self.lastpos.x~=nil then
 			if node.name ~= "air" and node.name ~= "saturn:fog" and node.name ~= "ignore" then
@@ -951,6 +913,8 @@ minetest.register_on_joinplayer(function(player)
 		saturn.hud_radar_shelf[i] = player:hud_add(hud_radar_shelf[i])
 		saturn.hud_radar_text[i] = player:hud_add(hud_radar_text[i])
 	end
+	saturn.hud_waypoint_shelf = player:hud_add(hud_waypoint_shelf_definition)
+	saturn.hud_waypoint_text = player:hud_add(hud_waypoint_text_definition)
 	if saturn.players_info[name] == nil then
 		create_new_player(player)
 	end
