@@ -39,6 +39,7 @@ if not saturn.human_space_station then
 		minp = minp,
 		maxp = maxp,
 		index = i,
+		max_urgency_class = 1,
 		}
     end
 end
@@ -94,6 +95,7 @@ saturn.deliver_package_and_get_reward = function(ss_index, player, do_deliver)
 						local postman_rating = saturn.players_info[name]['postman_rating']
 						if punctuality >= 1 then
 							saturn.players_info[name]['postman_rating'] = postman_rating + 2
+							saturn.human_space_station[ss_index].max_urgency_class = saturn.human_space_station[ss_index].max_urgency_class + 1
 						end
 						local money = saturn.players_info[name]['money']
 						saturn.players_info[name]['money'] = money + reward
@@ -249,7 +251,7 @@ local generate_random_mail_package = function(ss_index)
 	end
 	local sending_date = minetest.get_gametime()
 	local delivery_distance = vector.distance(saturn.human_space_station[ss_index],saturn.human_space_station[delivery_address])
-	local urgency_class = math.random(10)
+	local urgency_class = math.random(saturn.human_space_station[ss_index].max_urgency_class)
 	local delivery_term = delivery_distance / (10 + urgency_class * urgency_class) + 100
 	local reward = urgency_class * urgency_class * delivery_distance / 10
 	package:set_metadata(minetest.serialize({

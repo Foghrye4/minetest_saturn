@@ -1,4 +1,11 @@
 ## Editors and Development environments
 *~
 ## Those too big
-##*.xcf
+*.xcf
+*.blend
+*.blend1
+*.jpg
+## Those splitted and no more used in game
+*enemy_mothership.mts
+*human_space_station.mts
+

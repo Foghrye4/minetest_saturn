@@ -53,9 +53,9 @@ local n_chunksize = minetest.setting_get("chunksize") * 16
 if not saturn.enemy_space_station then
     saturn.enemy_space_station = {}
     for i = 1, 2 do
-	local x = math.floor(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
-	local y = math.floor(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
-	local z = math.floor(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
+	local x = math.floor(math.max(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000),-30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
+	local y = math.floor(math.max(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000),-30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
+	local z = math.floor(math.max(math.min(saturn.get_pseudogaussian_random(15000, 1000),30000),-30000) * (i*2-3) / n_chunksize) * n_chunksize + 28 - 32
 	local minp = {
 		x = x - 28 - 128,
 		y = y - 28 - 128,

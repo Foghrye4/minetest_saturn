@@ -211,7 +211,13 @@ minetest.register_chatcommand("saturn_set_postman_rating_to_player", {
 	privs = {server = true},
 	func = function(name, param)
 		local params_list = string.split(param, " ", false, -1, false)
-		saturn.players_info[params_list[1]]['postman_rating'] = tonumber(params_list[2])
-		return true, "player ".. params_list[1].." now has postman rating "..tonumber(params_list[2])
+		if saturn.players_info[params_list[1]] then
+			saturn.players_info[params_list[1]]['postman_rating'] = tonumber(params_list[2] or 1)
+			return true, "Player '".. params_list[1].."' now has postman rating "..saturn.players_info[params_list[1]]['postman_rating']
+		else
+			return false, "No such player '".. (params_list[1] or "").."'"
+		end
 	end,
 })
+
+
