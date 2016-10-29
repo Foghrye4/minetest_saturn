@@ -14,25 +14,28 @@ minetest.register_alias("mapgen_snow", "saturn:fog")
 minetest.register_alias("mapgen_ice", "saturn:fog")
 minetest.register_alias("mapgen_sandstone", "saturn:fog")
 
+local mapgen_chunksize = minetest.setting_get("chunksize")
+local blob_scarcity = 51200 -- chunk_volume/this = amounts of blobs per chunk. Chunk volume is 80*80*80 = 512000, so it is 10 blobs per chunk
+
 minetest.register_ore({
 	ore_type       = "sheet",
 	ore            = "saturn:fog",
 	wherein        = "air",
-	clust_scarcity = 60*60*60,
+	clust_scarcity = -1, -- Unused for sheet. Can be any
 	clust_num_ores = 30,
 	clust_size     = 16,
 	y_min     = -300,
 	y_max     = 300,
         noise_threshold = 0.5,
         noise_params = {offset=0, scale=1, spread={x=100, y=100, z=100}, seed=23, octaves=3, persist=0.70},
-	column_y_max = 1,
+	column_height_max = 1,
 })
 
 minetest.register_ore({ 
 	ore_type         = "blob",
 	ore              = "saturn:water_ice",
 	wherein          = {"air","saturn:fog"},
-	clust_scarcity   = 24*24*24,
+	clust_scarcity   = blob_scarcity,
 	clust_size       = 35,
 	y_min            = -400,
 	y_max            = 400,
@@ -51,14 +54,14 @@ minetest.register_ore({
 	ore_type         = "blob",
 	ore              = "saturn:water_ice",
 	wherein          = {"air","saturn:fog"},
-	clust_scarcity   = 24*24*24,
+	clust_scarcity   = blob_scarcity,
 	clust_size       = 10,
 	y_min            = -750,
 	y_max            = 750,
 	noise_threshold = 0,
 	noise_params     = {
-		offset=-0.75,
-		scale=1,
+		offset=-0.75, 	-- 0.75
+		scale=1, 	-- 1
 		spread={x=50, y=50, z=50},
 		seed=485,
 		octaves=3,
@@ -73,7 +76,7 @@ for ore_name,stats in pairs(saturn.ores) do
 	ore_type         = "blob",
 	ore              = ore_name,
 	wherein          = {"saturn:water_ice"},
-	clust_scarcity   = 24*24*24,
+	clust_scarcity   = blob_scarcity,
 	clust_size       = 35,
 	y_min            = -750,
 	y_max            = 750,
@@ -92,19 +95,17 @@ end
 local is_inside_aabb = saturn.is_inside_aabb
 local update_space_station_market = saturn.update_space_station_market
 
-local mapgen_chunksize = minetest.setting_get("chunksize")
-
 local mapgen_schematics_map = {}
 
 local hss_filename_prefix = minetest.get_modpath("saturn").."/schematics/splitted/".."human_space_station".."_"
 
 for _,ss in ipairs(saturn.human_space_station) do
-	local minx = math.floor(ss.minp.x/16/mapgen_chunksize)*16*mapgen_chunksize
-	local miny = math.floor(ss.minp.y/16/mapgen_chunksize)*16*mapgen_chunksize
-	local minz = math.floor(ss.minp.z/16/mapgen_chunksize)*16*mapgen_chunksize
-	local maxx = math.ceil(ss.maxp.x/16/mapgen_chunksize)*16*mapgen_chunksize
-	local maxy = math.ceil(ss.maxp.y/16/mapgen_chunksize)*16*mapgen_chunksize
-	local maxz = math.ceil(ss.maxp.z/16/mapgen_chunksize)*16*mapgen_chunksize
+	local minx = math.floor((ss.x-58+32)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local miny = math.floor((ss.y-100+32)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local minz = math.floor((ss.z-58+32)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxx = math.ceil((ss.x+58)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxy = math.ceil((ss.y+109)/16/mapgen_chunksize)*16*mapgen_chunksize
+	local maxz = math.ceil((ss.z+58)/16/mapgen_chunksize)*16*mapgen_chunksize
 	for ix = minx, maxx, 16*mapgen_chunksize do
 	for iy = miny, maxy, 16*mapgen_chunksize do
 	for iz = minz, maxz, 16*mapgen_chunksize do
@@ -143,8 +144,16 @@ for _,ess in ipairs(saturn.enemy_space_station) do
 	end
 end
 
-
+--[[saturn.gen_timer = os.clock()
+saturn.first_gen = os.clock()
+saturn.gen_number = 0]]
 minetest.register_on_generated(function(minp, maxp, seed)
+--[[    local gen_interval = os.clock()-saturn.gen_timer
+    saturn.gen_number = saturn.gen_number + 1
+    local gen_average = (os.clock()-saturn.first_gen)/saturn.gen_number
+    minetest.chat_send_all("Generation takes "..string.format("%4.2f",gen_interval).."s")
+    minetest.chat_send_all("Average "..string.format("%4.2f",gen_average).."s")
+    saturn.gen_timer = os.clock()]]
     local structure_filename = mapgen_schematics_map[minetest.hash_node_position(minp)]
     if structure_filename then
     	local vm, emin, emax = minetest.get_mapgen_object("voxelmanip")
@@ -153,44 +162,3 @@ minetest.register_on_generated(function(minp, maxp, seed)
 	vm:write_to_map()
     end
 end)
-
---[[
-
-saturn.on_first_generation = true
-
-minetest.register_on_generated(function(minp, maxp, seed)
-    local all_structures_are_generated = true
-    for _indx,ss in ipairs(saturn.human_space_station) do
-	if saturn.on_first_generation then
-	    minetest.emerge_area(ss.minp, ss.maxp)
-	end
-	if is_inside_aabb(ss,minp,maxp) then
-	    -- Human space staion size 209 Y 116 XZ
-	    minetest.place_schematic(vector.new(ss.x-58,ss.y-100,ss.z-58), minetest.get_modpath("saturn").."/schematics/human_space_station.mts", 0, {}, true)
-	    ss.is_generated = true
-	    return
-	end
-	if not ss.is_generated then
-	    all_structures_are_generated = false
-	end
-    end
-    for _indx,ess in ipairs(saturn.enemy_space_station) do
-	if saturn.on_first_generation then
-	    minetest.emerge_area(ess.minp, ess.maxp)
-	end
-	if is_inside_aabb(ess,minp,maxp) then
-	    minetest.place_schematic(vector.new(ess.x-26,ess.y-26,ess.z-32), minetest.get_modpath("saturn").."/schematics/enemy_mothership.mts", 0, {}, true)
-	    ess.is_generated = true
-	    return
-	end
-	if not ess.is_generated then
-	    all_structures_are_generated = false
-	end
-    end
-    saturn.on_first_generation = false
-    if all_structures_are_generated then
-	table.remove(core.registered_on_generateds, saturn.rog)
-    end
-end)
-
-saturn.rog = #core.registered_on_generateds ]]--

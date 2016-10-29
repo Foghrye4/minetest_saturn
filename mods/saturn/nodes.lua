@@ -30,7 +30,6 @@ local function register_node_with_stats(registry_name, node_def)
 	node_def.wield_image = "null.png"
         node_def.sounds = {
             dig =  {name="saturn_retractor", gain=0.5},
-            --dug = <SimpleSoundSpec>,
         }
 	minetest.register_node(registry_name, node_def)
 	if node_def.is_market_item then

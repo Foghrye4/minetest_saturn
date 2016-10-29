@@ -19,20 +19,22 @@ end
 
 saturn.load_human_space_station()
 
+local n_chunksize = minetest.setting_get("chunksize") * 16
+
 if not saturn.human_space_station then
     saturn.human_space_station = {}
     for i = 1, saturn.NUMBER_OF_SPACE_STATIONS do
-	local x = (math.random(7750) - 3875) * (i-1)
-	local y = saturn.get_pseudogaussian_random(-100, 10)
-	local z = (math.random(7750) - 3875) * (i-1)
+	local x = math.floor((math.random(7750) - 3875) * (i-1) / n_chunksize) * n_chunksize + 58 - 32
+	local y = math.floor(saturn.get_pseudogaussian_random(-100, 10) / n_chunksize) * n_chunksize + 100 - 32
+	local z = math.floor((math.random(7750) - 3875) * (i-1) / n_chunksize) * n_chunksize + 58 - 32
 	local minp = {
-		x = x - 58,
+		x = x - 58 - 80,
 		y = y - 100,
-		z = z - 58,}
+		z = z - 58 - 80,}
 	local maxp = {
-		x = x + 58,
-		y = y + 109,
-		z = z + 58,}
+		x = x + 58 + 80,
+		y = y + 109 + 80,
+		z = z + 58 + 80,}
 	saturn.human_space_station[i] = {x = x,
 		y = y,
 		z = z,

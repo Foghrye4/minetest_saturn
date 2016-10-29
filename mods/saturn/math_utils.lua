@@ -31,6 +31,40 @@ saturn.vector_multiply = function(a,b)
 	return vector.new(c_x,c_y,c_z)
 end
 
+saturn.vector_to_matrix_multiply = function(vec,mat)
+	return vector.new(
+		vec.x*mat[1][1]+vec.y*mat[2][1]+vec.z*mat[3][1]+mat[4][1],
+		vec.x*mat[1][2]+vec.y*mat[2][2]+vec.z*mat[3][2]+mat[4][2],
+		vec.x*mat[1][3]+vec.y*mat[2][3]+vec.z*mat[3][3]+mat[4][3])
+end
+
+saturn.get_rotation_matrix_x = function(angle)
+	return {
+		{1, 0, 		     0, 	      0},
+		{0, math.cos(angle), -math.sin(angle),0},
+		{0, math.sin(angle), math.cos(angle), 0},
+		{0, 0,		     0,		      1},
+	}
+end
+
+saturn.get_rotation_matrix_y = function(angle)
+	return {
+		{math.cos(angle), 0, math.sin(angle), 0},
+		{0, 		  1, 0,	  	      0},
+		{-math.sin(angle),0, math.cos(angle), 0},
+		{0,	  	  0, 0,		      1},
+	}
+end
+
+saturn.get_rotation_matrix_z = function(angle)
+	return {
+		{math.cos(angle), -math.sin(angle), 0, 0},
+		{math.sin(angle), math.cos(angle),  0, 0},
+		{0,	    	  0,		    1, 0},
+		{0,		  0,		    0, 1},
+	}
+end
+
 saturn.sign_of_number = function(a)
 	if a==0 then
 		return 0

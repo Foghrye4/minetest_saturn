@@ -54,7 +54,11 @@ end
 
 saturn.find_target = find_target
 
-saturn.get_onscreen_coords_of_object = function(player, object) --highly inaccurate
+local vector_to_matrix_multiply = saturn.vector_to_matrix_multiply
+local get_rotation_matrix_y = saturn.get_rotation_matrix_y
+local get_rotation_matrix_x = saturn.get_rotation_matrix_x
+
+saturn.get_onscreen_coords_of_object = function(player, object)
 	local look_horizontal = player:get_look_horizontal()
 	local look_vertical = player:get_look_vertical()
 	local player_pos = player:getpos()
@@ -65,41 +69,25 @@ saturn.get_onscreen_coords_of_object = function(player, object) --highly inaccur
 		object_pos = object:getpos()
 	end
 
-	local dir_to_object = vector.direction(player_pos, object_pos)
+	local vector_to_object = vector.subtract(object_pos, player_pos)
+	local result = vector_to_matrix_multiply(vector_to_object, get_rotation_matrix_y(-look_horizontal))
+	result = vector_to_matrix_multiply(result, get_rotation_matrix_x(look_vertical))
 
-	local o_lv = math.asin(-dir_to_object.y)
-	local o_lh = 0
-	if math.abs(dir_to_object.z) < math.abs(dir_to_object.x) then
-	    o_lh = math.atan(-dir_to_object.z,dir_to_object.x)
-	    if dir_to_object.x > 0 then
-		o_lh = math.pi * 1.5 - o_lh
-	    else
-	    	o_lh = math.pi * 0.5 + o_lh
-	    end
+	local x_pos = 0.5
+	local y_pos = 0.5
+	-- Results are useful only if z-value > 0
+	if result.z > 0.01 then
+		x_pos = result.x/result.z+0.5
+		y_pos = -result.y/result.z+0.5
 	else
-	    o_lh = math.atan(-dir_to_object.x,dir_to_object.z)
-	    if dir_to_object.z > 0 then
-		if o_lh < 0 then
-		    o_lh = o_lh + math.pi * 2
+		x_pos = result.x + 0.5
+		y_pos = -result.y + 0.5
+		if x_pos < 0.5 then
+			x_pos = -0.1
+		else
+			x_pos = 1.1
 		end
-	    else
-	    	o_lh = math.pi - o_lh
-	    end
 	end
-
-	if look_horizontal < 0  then -- In some cases its true
-		look_horizontal = look_horizontal + math.pi * 2
-	end
-
-	local dlv = o_lv - look_vertical
-	local dlh = look_horizontal - o_lh
-	if dlh > math.pi then
-	    dlh = dlh - math.pi * 2
-	elseif dlh < -math.pi then
-	    dlh = dlh + math.pi * 2
-	end
-	local x_pos = 0.5*dlh/fov_x_rad+0.5
-	local y_pos = 0.5*dlv/fov_y_rad+0.5
 
 	local frame_type = 0
 	if x_pos < 0 and y_pos < 0 then
