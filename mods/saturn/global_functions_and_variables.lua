@@ -751,9 +751,9 @@ minetest.register_globalstep(function(dtime)
 		local vel_x = ve.vel_x
 		local vel_y = ve.vel_y
 		local vel_z = ve.vel_z
-		local pos_x = ve.x + vel_x
-		local pos_y = ve.y + vel_y
-		local pos_z = ve.z + vel_z
+		local pos_x = ve.x + vel_x*dtime
+		local pos_y = ve.y + vel_y*dtime
+		local pos_z = ve.z + vel_z*dtime
 		if saturn.player_ship_ref then
 			local psp = saturn.player_ship_ref:getpos()
 			vel_x = math.max(math.min((psp.x - pos_x)/100,10),-10)
@@ -794,7 +794,7 @@ minetest.register_globalstep(function(dtime)
 		    end
 	   	    local entity = minetest.add_entity(ve, ve.entity_name or entity_name)
 		    if entity then
-			local direction_velocity = vector.new(vel_x,vel_y,vel_z)
+			local direction_velocity = vector.new(vel_x*dtime,vel_y*dtime,vel_z*dtime)
 			local closest_player = get_closest_player(ve)
 			if closest_player and closest_player:get_attach() then
 				local psv = closest_player:get_attach():getvelocity()

@@ -220,4 +220,14 @@ minetest.register_chatcommand("saturn_set_postman_rating_to_player", {
 	end,
 })
 
+minetest.register_chatcommand("saturn_update_ss", {
+	params = "",
+	description = "Update space station",
+	privs = {server = true},
+	func = function(name, param)
+		saturn.update_space_station(tonumber(param))
+		return true, "Done, SS#"..param.." updated." 
+	end,
+})
+
 

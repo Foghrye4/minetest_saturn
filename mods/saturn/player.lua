@@ -1,10 +1,23 @@
+local function throw_away_unfitted_items_from_hold(player_inv, slots_max)
+    if player_inv:get_size("hold") > slots_max then
+	for listpos,stack in pairs(player_inv:get_list("hold")) do
+	    if listpos > slots_max and stack ~= nil then
+		player_inv:remove_item(list_name, stack)
+		if player:get_attach() then
+			saturn.throw_item(stack, player:get_attach(), player:getpos())
+		end
+	    end
+	end
+    end
+end
+
 
 local function remove_unfitted_items_to_hold(player_inv, list_name, slots_max)
     if player_inv:get_size(list_name) > slots_max then
 	for listpos,stack in pairs(player_inv:get_list(list_name)) do
 	    if listpos > slots_max and stack ~= nil then
 		player_inv:remove_item(list_name, stack)
-		player_inv:add_item("main", stack)
+		player_inv:add_item("hold", stack)
 	    end
 	end
     end
@@ -13,28 +26,34 @@ end
 local function define_player_inventory_slots(player, start_hull)
     local player_inv = player:get_inventory()
     local hull_stats = saturn.get_item_stats(start_hull:get_name())
+    local weapon_slots = hull_stats.weapon_slots
     local engine_slots = hull_stats.engine_slots
     local power_generator_slots  = hull_stats.power_generator_slots
     local droid_slots = hull_stats.droid_slots
     local radar_slots = hull_stats.radar_slots
     local forcefield_generator_slots = hull_stats.forcefield_generator_slots
     local special_equipment_slots = hull_stats.special_equipment_slots
+    local hold_slots = hull_stats.hold_slots
     player_inv:set_size("ship_hull", 1)
     for i = 1, saturn.NUMBER_OF_SPACE_STATIONS do
 	player_inv:set_size("hangar"..i, 6)
     end
+    throw_away_unfitted_items_from_hold(player_inv, hold_slots)
+    remove_unfitted_items_to_hold(player_inv, "main", weapon_slots)
     remove_unfitted_items_to_hold(player_inv, "engine", engine_slots)
     remove_unfitted_items_to_hold(player_inv, "power_generator", power_generator_slots)
     remove_unfitted_items_to_hold(player_inv, "droid", droid_slots)
     remove_unfitted_items_to_hold(player_inv, "radar", radar_slots)
     remove_unfitted_items_to_hold(player_inv, "forcefield_generator", forcefield_generator_slots)
     remove_unfitted_items_to_hold(player_inv, "special_equipment", special_equipment_slots)
+    player_inv:set_size("main", weapon_slots)
     player_inv:set_size("engine", engine_slots)
     player_inv:set_size("power_generator", power_generator_slots)
     player_inv:set_size("droid", droid_slots)
     player_inv:set_size("radar", radar_slots)
     player_inv:set_size("forcefield_generator", forcefield_generator_slots)
     player_inv:set_size("special_equipment", special_equipment_slots)
+    player_inv:set_size("hold", hold_slots)
 end
 
 local function give_initial_stuff(player, start_hull)
@@ -149,6 +168,35 @@ local function refresh_hull(player)
 		end
 	end
 end
+
+local function refresh_weapons(player)
+    local ship_lua = player:get_attach():get_luaentity()
+    ship_lua.forcefield_modificators = {}
+    if player:get_inventory():get_size("main") > 0 then
+	for listpos,stack in pairs(player:get_inventory():get_list("main")) do
+		if stack ~= nil and not stack:is_empty() then
+			local stats = saturn.get_item_stats(stack:get_name())
+			if stats then
+				if stats['damage'] then
+					local metadata = minetest.deserialize(stack:get_metadata())
+					if metadata then
+						for modificator_key,value in pairs(metadata) do
+						    if modificator_key ~= "damage" and modificator_key ~= "cooldown" then
+							if ship_lua.weapon_modificators[modificator_key] then
+								ship_lua.weapon_modificators[modificator_key] = ship_lua.weapon_modificators[modificator_key] + value
+							else
+								ship_lua.weapon_modificators[modificator_key] = value
+							end
+						    end
+						end
+					end
+				end
+			end
+		end
+	end
+    end
+end
+
 
 local function refresh_traction(player)
     local ship_lua = player:get_attach():get_luaentity()

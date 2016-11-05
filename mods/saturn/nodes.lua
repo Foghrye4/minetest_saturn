@@ -31,6 +31,10 @@ local function register_node_with_stats(registry_name, node_def)
         node_def.sounds = {
             dig =  {name="saturn_retractor", gain=0.5},
         }
+	node_def.on_dig = function(pos, node, digger)
+		minetest.remove_node(pos)
+		digger:get_inventory():add_item("hold", node.name)
+	end
 	minetest.register_node(registry_name, node_def)
 	if node_def.is_market_item then
 		table.insert(saturn.market_items, registry_name)

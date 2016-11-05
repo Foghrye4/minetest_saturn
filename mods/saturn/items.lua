@@ -23,15 +23,6 @@ local default_enemy_generator_item_possible_modifications = {
 		droid_efficiency = {-0.1,0.1},
 	}
 
-
-local default_enemy_weapon_item_possible_modifications = {
-		weight = {-10,10},
-		volume = {-1,1},
-		rated_power = {-10,10},
-		damage = {-10,10},
-		cooldown = {-0.1,0.1},
-	}
-
 local function register_wearable_item(registry_name, def)
         def.wield_image = "null.png"
         def.stack_max = 1
@@ -70,12 +61,14 @@ register_wearable_item("saturn:basic_ship_hull",{
 	free_space = 100,
 	price = 300,
 	max_wear = 100, -- out of 65535
+	weapon_slots = 1,
 	engine_slots = 2,
 	power_generator_slots = 1,
 	droid_slots = 0,
 	radar_slots = 0,
 	forcefield_generator_slots = 0,
 	special_equipment_slots = 0,
+	hold_slots = 36,
 	is_market_item = true,
 	player_visual = {
 		mesh = "basic_ship.b3d",
@@ -98,12 +91,14 @@ register_wearable_item("saturn:basic_ship_hull_me",{
 	free_space = 200,
 	price = 8000,
 	max_wear = 400, -- out of 65535
+	weapon_slots = 3,
 	engine_slots = 2,
 	power_generator_slots = 1,
 	droid_slots = 0,
 	radar_slots = 1,
 	forcefield_generator_slots = 1,
 	special_equipment_slots = 0,
+	hold_slots = 36,
 	is_market_item = true,
 	player_visual = {
 		mesh = "basic_ship.b3d",
@@ -126,12 +121,14 @@ register_wearable_item("saturn:overkiller_hull",{
 	free_space = 2000,
 	price = 2000000,
 	max_wear = 65535, -- out of 65535
+	weapon_slots = 8,
 	engine_slots = 8,
 	power_generator_slots = 4,
 	droid_slots = 4,
 	radar_slots = 1,
 	forcefield_generator_slots = 1,
 	special_equipment_slots = 4,
+	hold_slots = 36,
 	is_market_item = true,
 	player_visual = {
 		mesh = "saturn_overkiller_ship.b3d",
@@ -154,12 +151,14 @@ register_wearable_item("saturn:escape_pod",{
 	free_space = 0,
 	price = 0,
 	max_wear = 65535, -- out of 65535
+	weapon_slots = 0,
 	engine_slots = 0,
 	power_generator_slots = 0,
 	droid_slots = 0,
 	radar_slots = 0,
 	forcefield_generator_slots = 0,
 	special_equipment_slots = 0,
+	hold_slots = 0,
 	player_visual = {
 		mesh = "escape_pod.b3d",
 		textures = {"basic_ship.png"},
@@ -234,7 +233,7 @@ local retractor_on_use = function(stack, player, pointed_thing)
 					if is_clear then 
 						local inv = player:get_inventory()
 						if inv and lua_entity.itemstring ~= '' then
-							inv:add_item("main", lua_entity.itemstring)
+							inv:add_item("hold", lua_entity.itemstring)
 							stack:add_wear(saturn.MAX_ITEM_WEAR / max_wear)
 						end
 						lua_entity.itemstring = ''
@@ -359,6 +358,7 @@ register_wearable_item("saturn:basic_retractor",{
 	max_wear = 2000, -- out of 65535
 	rated_power = 1, -- MW, megawatts
 	is_market_item = true,
+	equipment_slot = "weapon",
 })
 
 register_wearable_item("saturn:retractor_scr2",{
@@ -387,6 +387,7 @@ register_wearable_item("saturn:retractor_scr2",{
 	max_wear = 2000, -- out of 65535
 	rated_power = 2, -- MW, megawatts
 	is_market_item = true,
+	equipment_slot = "weapon",
 })
 
 -- Engines
@@ -821,6 +822,7 @@ register_wearable_item("saturn:cdbcemw",{
 	is_market_item = true,
 	sound_spec_single_shot = {name="saturn_plasm_accelerator", gain=0.5},
 	create_hit_effect = saturn.create_hit_effect,
+	equipment_slot = "weapon",
 })
 
 register_wearable_item("saturn:uhv_railgun",{
@@ -844,6 +846,7 @@ register_wearable_item("saturn:uhv_railgun",{
 	is_market_item = true,
 	sound_spec_single_shot = {name="saturn_railgun_shot", gain=0.5},
 	create_hit_effect = saturn.create_railgun_hit_effect,
+	equipment_slot = "weapon",
 })
 
 register_wearable_item("saturn:enemy_particle_emitter",{
@@ -863,10 +866,11 @@ register_wearable_item("saturn:enemy_particle_emitter",{
 	max_wear = 2000, -- out of 65535
 	rated_power = 6, -- MW, megawatts
 	is_enemy_item = true,
-	possible_modifications = default_enemy_weapon_item_possible_modifications,
+	possible_modifications = default_enemy_item_possible_modifications,
 	sound_spec_single_shot = {name="saturn_plasm_accelerator", gain=0.5},
 	create_hit_effect = saturn.create_hit_effect,
 	loot_level = 1,
+	equipment_slot = "weapon",
 })
 
 register_wearable_item("saturn:gauss_mg",{
@@ -893,6 +897,7 @@ register_wearable_item("saturn:gauss_mg",{
 	sound_spec_loop = {name="saturn_gauss_mg_shot", gain=1.0, max_hear_distance = 0.5, loop=true},
 	sound_spec_single_shot = {name="saturn_gauss_mg_shot_single", gain=1.0, max_hear_distance = 0.5},
 	create_hit_effect = saturn.create_gauss_hit_effect,
+	equipment_slot = "weapon",
 })
 
 minetest.register_chatcommand("give_enemy_item", {

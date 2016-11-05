@@ -85,70 +85,95 @@ saturn.get_ship_equipment_formspec = function(player)
 	local inv = player:get_inventory()
 	local name = player:get_player_name()
 	-- Hull
-	local formspec = "list[current_player;ship_hull;0,0;1,1;]".."box[0,0;0.8,0.9;#FFFFFF]"..get_formspec_label_with_bg_color(0,1,0.8,0.2,"#FFFFFF","Hull")..
-	"image_button[0.81,0;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+ship_hull+1;]"
+	local formspec = "list[current_player;ship_hull;2,0;1,1;]".."box[2,0;0.8,0.9;#FFFFFF]"..
+	"image_button[2.81,0;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+ship_hull+1;]"..
+	get_formspec_label_with_bg_color(0,0.6,0.8,0.2,"#FFFFFF","Hull")..
+	get_formspec_label_with_bg_color(0,1.0,0.8,0.2,"#000000","Weapons")..
+	get_formspec_label_with_bg_color(0,1.4,0.8,0.2,"#FFA800","Engine")..
+	get_formspec_label_with_bg_color(0,1.8,0.8,0.2,"#FF2200","Power")..
+	get_formspec_label_with_bg_color(0,2.2,0.8,0.2,"#770000","Droids")..
+	get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Radar")..
+	get_formspec_label_with_bg_color(0,3,0.8,0.2,"#A0A0FF","Forcefield")..
+	get_formspec_label_with_bg_color(0,3.4,0.8,0.2,"#A0FFA0","Special")
+	if inv:get_size("main") > 0 then
+		formspec = formspec.."box[3,0;1.8,3.9;#000000]"..
+		"list[current_player;main;3,0;2,4;]"
+		for ix = 3, 4 do
+			for iy = 0, math.ceil(inv:get_size("main")/3)-1 do
+				formspec = formspec.."image_button["..(ix+0.81)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix-2+3*iy)..";]"
+			end
+		end
+	end
 	if inv:get_size("engine") > 0 then
-		formspec = formspec.."box[1,0;1.8,3.9;#FFA800]"..get_formspec_label_with_bg_color(0,1.4,0.8,0.2,"#FFA800","Engine")..
-		"list[current_player;engine;1,0;2,4;]"
-		for ix = 1, 2 do
+		formspec = formspec.."box[5,0;1.8,3.9;#FFA800]"..
+		"list[current_player;engine;5,0;2,4;]"
+		for ix = 5, 6 do
 			for iy = 0, math.ceil(inv:get_size("engine")/2)-1 do
-				formspec = formspec.."image_button["..(ix+0.81)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+engine+"..(ix+2*iy)..";]"
+				formspec = formspec.."image_button["..(ix+0.81)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+engine+"..(ix-4+2*iy)..";]"
 			end
 		end
 	end
 	if inv:get_size("power_generator") > 0 then
-		formspec = formspec.."box[3,0;0.8,3.9;#FF2200]"..get_formspec_label_with_bg_color(0,1.8,0.8,0.2,"#FF2200","Power")..
-		"list[current_player;power_generator;3,0;1,4;]"
+		local ix = 7
+		formspec = formspec.."box["..ix..",0;0.8,3.9;#FF2200]"..
+		"list[current_player;power_generator;"..ix..",0;1,4;]"
 		for iy = 0, inv:get_size("power_generator")-1 do
-			formspec = formspec.."image_button[3.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+power_generator+"..(iy+1)..";]"
+			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+power_generator+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("droid") > 0 then
-		formspec = formspec.."box[4,0;0.8,3.9;#770000]"..get_formspec_label_with_bg_color(0,2.2,0.8,0.2,"#770000","Droids")..
-		"list[current_player;droid;4,0;1,4;]"
+		local ix = 8
+		formspec = formspec.."box["..ix..",0;0.8,3.9;#770000]"..
+		"list[current_player;droid;"..ix..",0;1,4;]"
 		for iy = 0, inv:get_size("droid")-1 do
-			formspec = formspec.."image_button[4.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+droid+"..(iy+1)..";]"
+			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+droid+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("radar") > 0 then
-		formspec = formspec.."box[5,0;0.8,0.9;#00FFF0]"..get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Radar")..
-		"list[current_player;radar;5,0;1,4;]"
+		local ix = 9
+		formspec = formspec.."box["..ix..",0;0.8,0.9;#00FFF0]"..
+		"list[current_player;radar;"..ix..",0;1,4;]"
 		for iy = 0, inv:get_size("radar")-1 do
-			formspec = formspec.."image_button[5.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+radar+"..(iy+1)..";]"
+			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+radar+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("forcefield_generator") > 0 then
-		formspec = formspec.."box[6,0;0.8,0.9;#A0A0FF]"..get_formspec_label_with_bg_color(0,3,0.8,0.2,"#A0A0FF","Forcefield")..
-		"list[current_player;forcefield_generator;6,0;1,1;]"
+		local ix = 10
+		formspec = formspec.."box["..ix..",0;0.8,0.9;#A0A0FF]"..
+		"list[current_player;forcefield_generator;"..ix..",0;1,1;]"
 		for iy = 0, inv:get_size("forcefield_generator")-1 do
-			formspec = formspec.."image_button[6.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+forcefield_generator+"..(iy+1)..";]"
+			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+forcefield_generator+"..(iy+1)..";]"
 		end
 	end
 	if inv:get_size("special_equipment") > 0 then
-		formspec = formspec.."box[7,0;0.8,3.9;#A0FFA0]"..get_formspec_label_with_bg_color(0,3.4,0.8,0.2,"#A0FFA0","Special")..
-		"list[current_player;special_equipment;7,0;1,4;]"
+		local ix = 11
+		formspec = formspec.."box["..ix..",0;0.8,3.9;#A0FFA0]"..
+		"list[current_player;special_equipment;"..ix..",0;1,4;]"
 		for iy = 0, inv:get_size("special_equipment")-1 do
-			formspec = formspec.."image_button[7.81,"..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+special_equipment+"..(iy+1)..";]"
+			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+special_equipment+"..(iy+1)..";]"
 		end
 	end
 	return formspec
 end
 
 saturn.get_main_inventory_formspec = function(player, vertical_offset)
-    local default_formspec = "list[current_player;main;0,"..vertical_offset..";8,1;]"..
-		"list[current_player;main;0,"..(vertical_offset+1.25)..";8,3;8]"..
-		saturn.default_slot_color
+    local default_formspec = saturn.default_slot_color
     if player then
     local name = player:get_player_name()
-	for ix = 1, 8 do
-		for iy = 0, 3 do
-			if iy==0 then
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..vertical_offset..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
-			else
-				default_formspec = default_formspec.."image_button["..(ix-0.19)..","..(iy+vertical_offset+0.25)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix+8*iy)..";]"
+	local hold_size = player:get_inventory():get_size("hold")
+        if hold_size > 0 then
+	    default_formspec = default_formspec .. "list[current_player;hold;0,"..vertical_offset..";12,4;]"
+	    for iy = 0, 3 do
+	        for ix = 0, 12 do
+			if ix+12*iy >= hold_size then
+			    return default_formspec
 			end
+			default_formspec = default_formspec.."image_button["..(ix+0.81)..","..
+				(iy+vertical_offset)..";0.3,0.4;saturn_info_button_icon.png;"..
+				"item_info_player+"..name.."+hold+"..(ix+1+12*iy)..";]"
 		end
-	end
+	    end
+        end
     end
     return default_formspec
 end
@@ -163,21 +188,13 @@ local get_player_inventory_formspec = function(player, tab)
 			local hull_max_wear = hull_stats['max_wear'] or saturn.MAX_ITEM_WEAR
 			local hull_wear = hull:get_wear()
 			local display_status = hull_wear * hull_max_wear / saturn.MAX_ITEM_WEAR
-			local max_volume = hull_stats['free_space']
+			local max_volume = hull_stats['free_space'] or 0
 			local ship = player:get_attach()
 			local ship_lua = ship:get_luaentity()
 			local velocity = vector.length(ship:getvelocity())
-			local traction = ship_lua['traction']
-			local traction_bonus = ship_lua.total_modificators['traction']
-			if traction_bonus then
-				traction = traction + traction_bonus
-			end
-			local forcefield_protection = ship_lua['forcefield_protection']
-			local forcefield_protection_bonus = ship_lua.total_modificators['forcefield_protection']
-			if forcefield_protection_bonus then
-				forcefield_protection = forcefield_protection + forcefield_protection_bonus
-			end
-			return "size[8,8.6]"..
+			local traction = ship_lua['traction'] + (ship_lua.total_modificators['traction'] or 0)
+			local forcefield_protection = ship_lua['forcefield_protection'] + (ship_lua.total_modificators['forcefield_protection'] or 0)
+			return "size[4,2.6]"..
 				default_formspec..
 				"label[0,0;"..minetest.formspec_escape("Hull damage: ")..string.format ('%4.0f',display_status).."/"..hull_max_wear.."]"..
 				"label[0,0.25;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
@@ -187,10 +204,9 @@ local get_player_inventory_formspec = function(player, tab)
 				"label[0,1.25;"..minetest.formspec_escape("Forcefield damage absorption: ")..string.format ('%4.1f',forcefield_protection).." %]"..
 				"label[0,1.5;"..minetest.formspec_escape("Max acceleration: ")..string.format ('%4.1f',traction/ship_lua['weight']).." m/s2]"..
 				"label[0,1.75;"..minetest.formspec_escape("Free power: ")..string.format ('%4.0f',ship_lua['free_power']).." MW]"..
-				"button[0,2;4,1;abandon_ship;Abandon ship]"..
-				saturn.get_main_inventory_formspec(player,4.25)
+				"button[0,2;4,1;abandon_ship;Abandon ship]"
 		elseif tab == 2 then
-			return "size[8,8.6]"..default_formspec..saturn.get_ship_equipment_formspec(player)..
+			return "size[12,7]"..default_formspec..saturn.get_ship_equipment_formspec(player)..
 				saturn.get_main_inventory_formspec(player,4.25)
 		elseif tab == 3 then
 			local ship = player:get_attach()

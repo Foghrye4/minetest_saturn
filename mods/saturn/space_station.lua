@@ -170,7 +170,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 			"label[5,"..row..";("..ss_x..","..ss_y..","..ss_z..")]"
 		end
 	elseif tab == 5 then
-		default_formspec = "size[9,9.75]"..
+		default_formspec = "size[12,8.6]"..
 		default_formspec..
 		"list[detached:space_station"..ss_index..";post_office;0,0;1,4;]"..
 		"label[0,4.0;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
@@ -209,7 +209,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 		end
 
 	else
-		default_formspec = "size[9,9.75]"..
+		default_formspec = "size[12,8.6]"..
 		default_formspec..
 		"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
 		saturn.get_ship_equipment_formspec(player)..
