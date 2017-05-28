@@ -5,7 +5,13 @@ saturn = rawget(_G, "saturn") or {}
 minetest.setting_set("time_speed", 0)
 minetest.set_timeofday(0.3)
 minetest.setting_set("enable_clouds", "false")
-minetest.setting_set("movement_gravity", 0)
+
+-- Set gravity to 0 on each player without modifying minetest.conf
+minetest.register_on_joinplayer(function(player)
+	player:set_physics_override({
+		gravity = 0
+	})
+end)
 
 local modpath = minetest.get_modpath("saturn")
 
