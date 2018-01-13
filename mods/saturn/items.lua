@@ -1039,6 +1039,7 @@ register_craft_item("saturn:mail_package",{
 register_craft_item("saturn:clean_water",{
 		description = "Clean water",
 		inventory_image = "saturn_cells.png^[verticalframe:64:1",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.2,
@@ -1048,6 +1049,7 @@ register_craft_item("saturn:clean_water",{
 register_craft_item("saturn:heavy_water",{
 		description = "Heavy water",
 		inventory_image = "saturn_cells.png^[verticalframe:64:2",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1,
@@ -1057,6 +1059,7 @@ register_craft_item("saturn:heavy_water",{
 register_craft_item("saturn:silicate_mix",{
 		description = "Silicate mix",
 		inventory_image = "saturn_cells.png^[verticalframe:64:3",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -1066,6 +1069,7 @@ register_craft_item("saturn:silicate_mix",{
 register_craft_item("saturn:ammonia",{
 		description = "Ammonia",
 		inventory_image = "saturn_cells.png^[verticalframe:64:4",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -1075,6 +1079,7 @@ register_craft_item("saturn:ammonia",{
 register_craft_item("saturn:acetic_acid",{
 		description = "Acetic acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:5",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -1084,6 +1089,7 @@ register_craft_item("saturn:acetic_acid",{
 register_craft_item("saturn:formic_acid",{
 		description = "Formic acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:6",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -1093,6 +1099,7 @@ register_craft_item("saturn:formic_acid",{
 register_craft_item("saturn:amorphous_carbon",{
 		description = "Amorphous carbon",
 		inventory_image = "saturn_cells.png^[verticalframe:64:7",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.1,
@@ -1102,6 +1109,7 @@ register_craft_item("saturn:amorphous_carbon",{
 register_craft_item("saturn:carbon_dioxide",{
 		description = "Carbon dioxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:8",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -1111,6 +1119,7 @@ register_craft_item("saturn:carbon_dioxide",{
 register_craft_item("saturn:phosphine",{
 		description = "Phosphine",
 		inventory_image = "saturn_cells.png^[verticalframe:64:9",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1120,6 +1129,7 @@ register_craft_item("saturn:phosphine",{
 register_craft_item("saturn:orthophosphoric_acid",{
 		description = "Orthophosphoric acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:10",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 3,
@@ -1129,6 +1139,7 @@ register_craft_item("saturn:orthophosphoric_acid",{
 register_craft_item("saturn:ammonia_nitrate",{
 		description = "Ammonia nitrate",
 		inventory_image = "saturn_cells.png^[verticalframe:64:11",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1,
@@ -1138,6 +1149,7 @@ register_craft_item("saturn:ammonia_nitrate",{
 register_craft_item("saturn:diammonium_phosphate",{
 		description = "Diammonium phosphate",
 		inventory_image = "saturn_cells.png^[verticalframe:64:12",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1,
@@ -1147,6 +1159,7 @@ register_craft_item("saturn:diammonium_phosphate",{
 register_craft_item("saturn:oxygen",{
 		description = "Oxygen",
 		inventory_image = "saturn_cells.png^[verticalframe:64:13",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -1156,6 +1169,7 @@ register_craft_item("saturn:oxygen",{
 register_craft_item("saturn:nitric_acid",{
 		description = "Nitric acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:14",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1165,6 +1179,7 @@ register_craft_item("saturn:nitric_acid",{
 register_craft_item("saturn:hydrogen_sulphide",{
 		description = "Hydrogen sulphide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:15",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.5,
@@ -1174,6 +1189,7 @@ register_craft_item("saturn:hydrogen_sulphide",{
 register_craft_item("saturn:sulphur",{
 		description = "Sulphur",
 		inventory_image = "saturn_cells.png^[verticalframe:64:16",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.2,
@@ -1183,6 +1199,7 @@ register_craft_item("saturn:sulphur",{
 register_craft_item("saturn:sulphide_salts_mix",{
 		description = "Sulphide salts mix",
 		inventory_image = "saturn_cells.png^[verticalframe:64:17",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 0.2,
@@ -1192,6 +1209,7 @@ register_craft_item("saturn:sulphide_salts_mix",{
 register_craft_item("saturn:silicon_dioxide",{
 		description = "Silicon_dioxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:18",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1201,6 +1219,7 @@ register_craft_item("saturn:silicon_dioxide",{
 register_craft_item("saturn:potassium_oxide",{
 		description = "Potassium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:19",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1210,6 +1229,7 @@ register_craft_item("saturn:potassium_oxide",{
 register_craft_item("saturn:calcium_oxide",{
 		description = "Calcium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:20",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1219,6 +1239,7 @@ register_craft_item("saturn:calcium_oxide",{
 register_craft_item("saturn:magnesium_oxide",{
 		description = "Magnesium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:21",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1228,6 +1249,7 @@ register_craft_item("saturn:magnesium_oxide",{
 register_craft_item("saturn:sodium_oxide",{
 		description = "Sodium oxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:22",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 10,
@@ -1237,6 +1259,7 @@ register_craft_item("saturn:sodium_oxide",{
 register_craft_item("saturn:alkali_solution",{
 		description = "Alkali solution",
 		inventory_image = "saturn_cells.png^[verticalframe:64:23",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1246,6 +1269,7 @@ register_craft_item("saturn:alkali_solution",{
 register_craft_item("saturn:metal_oxides_sludge",{
 		description = "Metal oxides sludge",
 		inventory_image = "saturn_cells.png^[verticalframe:64:24",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1.5,
@@ -1255,6 +1279,7 @@ register_craft_item("saturn:metal_oxides_sludge",{
 register_craft_item("saturn:sodiumless_lithiumless_alkali_solution",{
 		description = "Sodiumless lithiumless alkali solution",
 		inventory_image = "saturn_cells.png^[verticalframe:64:25",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 6,
@@ -1264,6 +1289,7 @@ register_craft_item("saturn:sodiumless_lithiumless_alkali_solution",{
 register_craft_item("saturn:sulphuric_acid",{
 		description = "Sulphuric acid",
 		inventory_image = "saturn_cells.png^[verticalframe:64:26",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 1.1,
@@ -1273,6 +1299,7 @@ register_craft_item("saturn:sulphuric_acid",{
 register_craft_item("saturn:sodium_hydroxide",{
 		description = "Sodium hydroxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:27",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 6,
@@ -1282,6 +1309,7 @@ register_craft_item("saturn:sodium_hydroxide",{
 register_craft_item("saturn:lithium_hydroxide",{
 		description = "lithium hydroxide",
 		inventory_image = "saturn_cells.png^[verticalframe:64:28",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 6,
@@ -1291,6 +1319,7 @@ register_craft_item("saturn:lithium_hydroxide",{
 register_craft_item("saturn:complex_fertilizer",{
 		description = "Complex fertilizer pellets for hydroponic farms",
 		inventory_image = "saturn_complex_fertilizer.png",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 4.5,
@@ -1300,6 +1329,7 @@ register_craft_item("saturn:complex_fertilizer",{
 register_craft_item("saturn:fresh_fruits_and_vegetables",{
 		description = "Fresh fruits and vegetables",
 		inventory_image = "saturn_fresh_fruits_and_vegetables.png",
+		stack_max = 9999,
 	weight = 10,
 	volume = 0.01,
 	price = 8,
