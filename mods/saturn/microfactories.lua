@@ -289,11 +289,12 @@ local get_microfactory_generator_formspec = function(pos, net_id)
 	local meta = minetest.get_meta(pos)
 	local power = meta:get_int("generated_power")
 	local total_power = saturn.microfactory_nets[net_id].energy
-	local formspec = "size[8,5.25]"..
+	local formspec = "size[8,7.25]"..
 	saturn.get_main_inventory_formspec(nil,1.25)..
 	"list[nodemeta:"..pos.x..","..pos.y..","..pos.z..";generator_slot;0,0;1,1;]"..
 	"label[1,0;Generated power: "..string.format('%.1f',power).." MW]"..
 	"label[1,0.2;Free net power: "..string.format('%.1f',total_power).." MW]"
+	.."list[current_player;hold;0,4.5;8,3;]"
 	return formspec
 end
 
@@ -458,6 +459,7 @@ local microfactory_formspec = function(pos, progress, cycle_time, energy_fail)
 	"image[3,1;2,2;saturn_timer_frames.png^[verticalframe:29:"..timer_frame_number.."]"..
 	"label[3.6,1.5;"..string.format('%02d',minutes_left)..":"..string.format('%02d',seconds_left).."]"..
 	"image_button[1,3;1,1;saturn_settings_button_icon.png;settings;]"
+	.."list[current_player;hold;0,4.5;8,3;]"
 	if energy_fail then
 		formspec = formspec.."label[2,3;Not enought energy to operate!]"
 	end
