@@ -15,6 +15,8 @@ saturn.localisation_and_units = {
 	on_place = {hidden = true},
 	on_construct = {hidden = true},
 	on_punch = {hidden = true},
+	on_net_form = {hidden = true},
+	on_net_power_change = {hidden = true},
 	groups = {hidden = true},
 	after_place_node = {hidden = true},
 	on_destruct = {hidden = true},
