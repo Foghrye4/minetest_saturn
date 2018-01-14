@@ -113,7 +113,7 @@ end
 
 local get_market_formspec = function(player, market_name, ss_index)
 	local player_name = player:get_player_name()
-	local default_formspec = "size[9,7]"..
+	local default_formspec = "size[15,9.6]"..
 	"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[player_name]['money']).." Cr.]"..
 	"list[detached:space_station"..ss_index..";"..market_name..";0,0;8,4;]"..
 	"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
@@ -143,7 +143,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 	elseif tab == 3 then
 		default_formspec = get_market_formspec(player, "microfactory_market", ss_index) .. default_formspec
 	elseif tab == 4 then
-		default_formspec = "size[9,4.2]"..
+		default_formspec = "size[15,9.6]"..
 		default_formspec..
 		"label[0,0;Amount of enemy ships near saturn:]"..		
 		"label[5,0;"..#saturn.virtual_enemy.."]"
@@ -170,11 +170,11 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 			"label[5,"..row..";("..ss_x..","..ss_y..","..ss_z..")]"
 		end
 	elseif tab == 5 then
-		default_formspec = "size[12,8.6]"..
+		default_formspec = "size[15,9.6]"..
 		default_formspec..
 		"list[detached:space_station"..ss_index..";post_office;0,0;1,4;]"..
 		"label[0,4.0;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
-		"label[2,4.0;".."Current time: "..saturn.date_to_string(minetest.get_gametime()).." (hh:mm:ss)]"..
+		"label[4,4.0;".."Current time: "..saturn.date_to_string(minetest.get_gametime()).." (hh:mm:ss)]"..
 		"label[0,4.3;By taking any of those packages you accept terms and conditions of delivery.]"..
 		"label[0,4.6;Your postman rating: "..(saturn.players_info[name]['postman_rating']).."]"..
 		saturn.get_main_inventory_formspec(player,5.75)
@@ -209,7 +209,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 		end
 
 	else
-		default_formspec = "size[12,8.6]"..
+		default_formspec = "size[15,9.6]"..
 		default_formspec..
 		"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
 		saturn.get_ship_equipment_formspec(player)..
