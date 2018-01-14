@@ -18,6 +18,11 @@ Default Controls
 
 Other controls are same as in "Minetest Minimal" and "Minetest Game"
 
+Noticeable contributors
+-----------------------
+osjc (Jozef Behran) (https://github.com/osjc)
+
+
 License of Minetest Saturn textures and sounds
 ---------------------------------------
 
