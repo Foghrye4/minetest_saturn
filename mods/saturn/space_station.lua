@@ -24,9 +24,16 @@ local n_chunksize = minetest.setting_get("chunksize") * 16
 if not saturn.human_space_station then
     saturn.human_space_station = {}
     for i = 1, saturn.NUMBER_OF_SPACE_STATIONS do
-	local x = math.floor((math.random(7750) - 3875) * (i-1) / n_chunksize) * n_chunksize + 58 - 32
-	local y = math.floor(saturn.get_pseudogaussian_random(-100, 10) / n_chunksize) * n_chunksize + 100 - 32
-	local z = math.floor((math.random(7750) - 3875) * (i-1) / n_chunksize) * n_chunksize + 58 - 32
+	local x,y,z
+	if i==1 then
+	    x = 0
+	    y = -100
+	    z = 0
+	else
+	    x = math.floor((math.random(7750) - 3875) * (i-1) / n_chunksize) * n_chunksize + 58 - 32
+	    y = math.floor(saturn.get_pseudogaussian_random(-100, 10) / n_chunksize) * n_chunksize + 100 - 32
+	    z = math.floor((math.random(7750) - 3875) * (i-1) / n_chunksize) * n_chunksize + 58 - 32
+	end
 	local minp = {
 		x = x - 58 - 80,
 		y = y - 100,
