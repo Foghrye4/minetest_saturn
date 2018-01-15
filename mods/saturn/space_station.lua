@@ -240,14 +240,9 @@ end
 local generate_random_mail_package = function(ss_index)
 	local package = ItemStack("saturn:mail_package")
 	local delivery_address
-	if ss_index == 1 then
-		delivery_address = math.random(2,saturn.NUMBER_OF_SPACE_STATIONS)
-	elseif ss_index == saturn.NUMBER_OF_SPACE_STATIONS then
-		delivery_address = math.random(1,saturn.NUMBER_OF_SPACE_STATIONS-1)
-	elseif math.random() < ss_index/saturn.NUMBER_OF_SPACE_STATIONS then
-		delivery_address = math.random(1,ss_index-1)
-	else
-		delivery_address = math.random(ss_index+1,saturn.NUMBER_OF_SPACE_STATIONS)
+	delivery_address = math.random(1,saturn.NUMBER_OF_SPACE_STATIONS-1)
+	if delivery_address == ss_index then
+	    delivery_address = delivery_address + 1
 	end
 	local sending_date = minetest.get_gametime()
 	local delivery_distance = vector.distance(saturn.human_space_station[ss_index],saturn.human_space_station[delivery_address])
