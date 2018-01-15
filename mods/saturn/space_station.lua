@@ -248,7 +248,7 @@ local generate_random_mail_package = function(ss_index)
 	local delivery_distance = vector.distance(saturn.human_space_station[ss_index],saturn.human_space_station[delivery_address])
 	local urgency_class = math.random(saturn.human_space_station[ss_index].max_urgency_class)
 	local delivery_term = (delivery_distance / (10 + urgency_class * urgency_class))*60 + 500
-	local reward = urgency_class * urgency_class * delivery_distance / 10
+	local reward = urgency_class * urgency_class * delivery_distance
 	package:set_metadata(minetest.serialize({
 		delivery_address = delivery_address,
 		sending_date = sending_date,
