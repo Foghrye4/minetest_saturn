@@ -195,15 +195,15 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 				local ss_z = math.floor(ss.z/10)*10
 				default_formspec = default_formspec..
 				"label[1,"..row..";Sending date:]"..
-				"label[3,"..row..";"..saturn.date_to_string(metadata.sending_date).."]"..
-				"label[1,"..(row+0.3)..";Destination address:]"..
-				"label[3,"..(row+0.3)..";SS#"..dst.." ("..ss_x..","..ss_y..","..ss_z..")]"..
+				"label[3.2,"..row..";"..saturn.date_to_string(metadata.sending_date).."]"..
+				"label[5,"..row..";Destination:]"..
+				"label[7.2,"..row..";SS#"..dst.." ("..ss_x..","..ss_y..","..ss_z..")]"..
 				"label[1,"..(row+0.6)..";Reward:]"..
 				"label[3,"..(row+0.6)..";"..string.format('%d', metadata.reward).." Cr. (10 Cr. in case delivery term was overdue by 100%)]"..
-				"label[5,"..row..";Urgency class:]"..
-				"label[7,"..row..";"..metadata.urgency_class.."]"..
-				"label[5,"..(row+0.3)..";Deliver before:]"..
-				"label[7,"..(row+0.3)..";"..saturn.date_to_string(metadata.sending_date + metadata.delivery_term).."]"
+				"label[5,"..(row+0.3)..";Urgency class:]"..
+				"label[7.2,"..(row+0.3)..";"..metadata.urgency_class.."]"..
+				"label[1,"..(row+0.3)..";Deliver before:]"..
+				"label[3.2,"..(row+0.3)..";"..saturn.date_to_string(metadata.sending_date + metadata.delivery_term).."]"
 			end
 			row = row + 1
 		end
