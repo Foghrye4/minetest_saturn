@@ -91,7 +91,7 @@ saturn.deliver_package_and_get_reward = function(ss_index, player, do_deliver)
 				local metadata = minetest.deserialize(stack:get_metadata())
 				if metadata and metadata.delivery_address == ss_index then
 					local punctuality = math.min(1, (metadata.delivery_term * 2 - (minetest.get_gametime() - metadata.sending_date))/metadata.delivery_term)
-					local reward =  math.max(10, metadata.reward * punctuality)
+					local reward =  metadata.reward * punctuality + 10
 					total_delivery_reward = total_delivery_reward + reward
 					if do_deliver then
 						local postman_rating = saturn.players_info[name]['postman_rating']
