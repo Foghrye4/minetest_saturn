@@ -164,7 +164,7 @@ saturn.get_main_inventory_formspec = function(player, vertical_offset)
         if hold_size > 0 then
 	    default_formspec = default_formspec .. "list[current_player;hold;0,"..vertical_offset..";12,4;]"
 	    for iy = 0, 3 do
-	        for ix = 0, 12 do
+	        for ix = 0, 11 do
 			if ix+12*iy >= hold_size then
 			    return default_formspec
 			end
