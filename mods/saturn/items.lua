@@ -128,7 +128,7 @@ register_wearable_item("saturn:overkiller_hull",{
 	radar_slots = 1,
 	forcefield_generator_slots = 1,
 	special_equipment_slots = 4,
-	hold_slots = 36,
+	hold_slots = 48,
 	is_market_item = true,
 	player_visual = {
 		mesh = "saturn_overkiller_ship.b3d",
