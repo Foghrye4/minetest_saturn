@@ -132,10 +132,10 @@ end
 saturn.get_space_station_formspec = function(player, tab, ss_index)
 	local name = player:get_player_name()
 	local size = "size[15,9.6]"
-	local money = "label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"
+	local money = "label[12,4.5;".."Money:\n"..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"
 	local buyout =
-	"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
-	"list[detached:space_station"..ss_index..";buying_up_spot;7,4.5;1,1;]"
+	"label[12,5.45;Buyout spot:]".."image[12,5.85;1,1;saturn_money.png]"..
+	"list[detached:space_station"..ss_index..";buying_up_spot;12,5.85;1,1;]"
 	local default_formspec = "tabheader[0,0;tabs;Equipment market,Ore market,Microfactory market,Intelligence info,Post office,Hangar and ship;"..tab..";true;false]"..
 		saturn.default_slot_color
 	if tab == 1 then
@@ -177,7 +177,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 		"label[4,4.0;".."Current time: "..saturn.date_to_string(minetest.get_gametime()).." (hh:mm:ss)]"..
 		"label[0,4.3;By taking any of those packages you accept terms and conditions of delivery.]"..
 		"label[0,4.6;Your postman rating: "..(saturn.players_info[name]['postman_rating']).."]"..
-		saturn.get_main_inventory_formspec(player,5.75)
+		saturn.get_main_inventory_formspec(player,5.85)
 		local delivery_reward = saturn.deliver_package_and_get_reward(ss_index, player, false)
 		if delivery_reward > 0 then
 			default_formspec = default_formspec..
@@ -214,7 +214,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 		saturn.get_ship_equipment_formspec(player)..
 		buyout..
 		"list[current_player;hangar"..ss_index..";0,4.5;6,1;]"..
-		saturn.get_main_inventory_formspec(player,5.75)
+		saturn.get_main_inventory_formspec(player,5.85)
 		for ix = 1, 6 do
 			default_formspec = default_formspec.."image_button["..(ix-0.19)..",4.5;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+hangar"..ss_index.."+"..ix..";]"
 		end
