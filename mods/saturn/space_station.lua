@@ -113,7 +113,7 @@ end
 
 local get_market_formspec = function(player, market_name, ss_index)
 	local player_name = player:get_player_name()
-	local default_formspec = "size[15,9.6]"..
+	local default_formspec =
 	"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[player_name]['money']).." Cr.]"..
 	"list[detached:space_station"..ss_index..";"..market_name..";0,0;8,4;]"..
 	"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
@@ -134,17 +134,17 @@ end
 
 saturn.get_space_station_formspec = function(player, tab, ss_index)
 	local name = player:get_player_name()
+	local size = "size[15,9.6]"
 	local default_formspec = "tabheader[0,0;tabs;Equipment market,Ore market,Microfactory market,Intelligence info,Post office,Hangar and ship;"..tab..";true;false]"..
 		saturn.default_slot_color
 	if tab == 1 then
-		default_formspec = get_market_formspec(player, "market", ss_index) .. default_formspec
+		default_formspec = size .. get_market_formspec(player, "market", ss_index) .. default_formspec
 	elseif tab == 2 then
-		default_formspec = get_market_formspec(player, "ore_market", ss_index) .. default_formspec
+		default_formspec = size .. get_market_formspec(player, "ore_market", ss_index) .. default_formspec
 	elseif tab == 3 then
-		default_formspec = get_market_formspec(player, "microfactory_market", ss_index) .. default_formspec
+		default_formspec = size .. get_market_formspec(player, "microfactory_market", ss_index) .. default_formspec
 	elseif tab == 4 then
-		default_formspec = "size[15,9.6]"..
-		default_formspec..
+		default_formspec = size .. default_formspec..
 		"label[0,0;Amount of enemy ships near saturn:]"..		
 		"label[5,0;"..#saturn.virtual_enemy.."]"
 		local row = -0.3
@@ -170,8 +170,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 			"label[5,"..row..";("..ss_x..","..ss_y..","..ss_z..")]"
 		end
 	elseif tab == 5 then
-		default_formspec = "size[15,9.6]"..
-		default_formspec..
+		default_formspec = size .. default_formspec..
 		"list[detached:space_station"..ss_index..";post_office;0,0;1,4;]"..
 		"label[0,4.0;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
 		"label[4,4.0;".."Current time: "..saturn.date_to_string(minetest.get_gametime()).." (hh:mm:ss)]"..
@@ -209,8 +208,7 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 		end
 
 	else
-		default_formspec = "size[15,9.6]"..
-		default_formspec..
+		default_formspec = size .. default_formspec..
 		"label[0,3.9;".."Money: "..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
 		saturn.get_ship_equipment_formspec(player)..
 		"label[6.8,4.1;Buyout spot:]".."image[7,4.5;1,1;saturn_money.png]"..
