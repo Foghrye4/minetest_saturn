@@ -98,7 +98,7 @@ saturn.deliver_package_and_get_reward = function(ss_index, player, do_deliver)
 				local metadata = minetest.deserialize(stack:get_metadata())
 				if metadata and metadata.delivery_address == ss_index then
 					local punctuality = math.min(1, (metadata.delivery_term * 2 - (minetest.get_gametime() - metadata.sending_date))/metadata.delivery_term)
-					local reward =  math.max(10, metadata.reward * punctuality)
+					local reward =  metadata.reward * punctuality + 10
 					total_delivery_reward = total_delivery_reward + reward
 					if do_deliver then
 						local postman_rating = saturn.players_info[name]['postman_rating']
@@ -181,14 +181,19 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 		default_formspec = size .. default_formspec..
 		"list[detached:space_station"..ss_index..";post_office;0,0;1,4;]"..
 		money ..
-		"label[4,4.0;".."Current time: "..saturn.date_to_string(minetest.get_gametime()).." (hh:mm:ss)]"..
-		"label[0,4.3;By taking any of those packages you accept terms and conditions of delivery.]"..
-		"label[0,4.6;Your postman rating: "..(saturn.players_info[name]['postman_rating']).."]"..
+		"label[12,2.5;".."Current time:\n"..saturn.date_to_string(minetest.get_gametime()).."]"..
+		"label[12,3.5;Your postman rating:\n"..(saturn.players_info[name]['postman_rating']).."]"..
+		"label[0,4;"..
+		"The stated reward is paid if delivered before the time indicated. On late delivery,\n"..
+		"the reward is reduced proportionally to the delay. If delayed by more than 100%\n"..
+		"of the delivery term, the reward is 10 Cr. By taking any of those packages you\n"..
+		"accept these terms and conditions of delivery."..
+		"]"..
 		saturn.get_main_inventory_formspec(player,5.85)
 		local delivery_reward = saturn.deliver_package_and_get_reward(ss_index, player, false)
 		if delivery_reward > 0 then
 			default_formspec = default_formspec..
-			"button[0,4.9;8,1;deliver;Deliver packages and get reward. Reward: "..string.format ('%d',delivery_reward).." Cr.]"
+			"button[12,5.85;3,1;deliver;Deliver packages\nReward: "..string.format ('%d',delivery_reward).." Cr.]"
 		end
 		local row = 0
 		local inv = saturn.space_station_inv[ss_index]
@@ -202,15 +207,15 @@ saturn.get_space_station_formspec = function(player, tab, ss_index)
 				local ss_z = math.floor(ss.z/10)*10
 				default_formspec = default_formspec..
 				"label[1,"..row..";Sending date:]"..
-				"label[3,"..row..";"..saturn.date_to_string(metadata.sending_date).."]"..
-				"label[1,"..(row+0.3)..";Destination address:]"..
-				"label[3,"..(row+0.3)..";SS#"..dst.." ("..ss_x..","..ss_y..","..ss_z..")]"..
+				"label[3.2,"..row..";"..saturn.date_to_string(metadata.sending_date).."]"..
+				"label[5,"..row..";Destination:]"..
+				"label[7.2,"..row..";SS#"..dst.." ("..ss_x..","..ss_y..","..ss_z..")]"..
 				"label[1,"..(row+0.6)..";Reward:]"..
-				"label[3,"..(row+0.6)..";"..string.format('%d', metadata.reward).." Cr. (10 Cr. in case delivery term was overdue by 100%)]"..
-				"label[5,"..row..";Urgency class:]"..
-				"label[7,"..row..";"..metadata.urgency_class.."]"..
-				"label[5,"..(row+0.3)..";Deliver before:]"..
-				"label[7,"..(row+0.3)..";"..saturn.date_to_string(metadata.sending_date + metadata.delivery_term).."]"
+				"label[3,"..(row+0.6)..";"..string.format('%d', metadata.reward).." Cr.]"..
+				"label[5,"..(row+0.3)..";Urgency class:]"..
+				"label[7.2,"..(row+0.3)..";"..metadata.urgency_class.."]"..
+				"label[1,"..(row+0.3)..";Deliver before:]"..
+				"label[3.2,"..(row+0.3)..";"..saturn.date_to_string(metadata.sending_date + metadata.delivery_term).."]"
 			end
 			row = row + 1
 		end
@@ -247,20 +252,15 @@ end
 local generate_random_mail_package = function(ss_index)
 	local package = ItemStack("saturn:mail_package")
 	local delivery_address
-	if ss_index == 1 then
-		delivery_address = math.random(2,saturn.NUMBER_OF_SPACE_STATIONS)
-	elseif ss_index == saturn.NUMBER_OF_SPACE_STATIONS then
-		delivery_address = math.random(1,saturn.NUMBER_OF_SPACE_STATIONS-1)
-	elseif math.random() < ss_index/saturn.NUMBER_OF_SPACE_STATIONS then
-		delivery_address = math.random(1,ss_index-1)
-	else
-		delivery_address = math.random(ss_index+1,saturn.NUMBER_OF_SPACE_STATIONS)
+	delivery_address = math.random(1,saturn.NUMBER_OF_SPACE_STATIONS-1)
+	if delivery_address == ss_index then
+	    delivery_address = delivery_address + 1
 	end
 	local sending_date = minetest.get_gametime()
 	local delivery_distance = vector.distance(saturn.human_space_station[ss_index],saturn.human_space_station[delivery_address])
 	local urgency_class = math.random(saturn.human_space_station[ss_index].max_urgency_class)
-	local delivery_term = delivery_distance / (10 + urgency_class * urgency_class) + 100
-	local reward = urgency_class * urgency_class * delivery_distance / 10
+	local delivery_term = (delivery_distance / (10 + urgency_class * urgency_class))*60 + 500
+	local reward = urgency_class * urgency_class * delivery_distance
 	package:set_metadata(minetest.serialize({
 		delivery_address = delivery_address,
 		sending_date = sending_date,
