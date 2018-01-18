@@ -452,6 +452,25 @@ minetest.register_node("saturn:space_station_yellow_black_stripes", {
 	groups = {space_station = 1},
 })
 
+local function update_post_office(player)
+    local restart = true
+    if player:get_attach() then
+	local ship_lua = player:get_attach():get_luaentity()
+	local tab = ship_lua['current_gui_tab']
+	local i = ship_lua['last_ss']
+	local opened = ship_lua['is_node_gui_opened']
+	if opened then
+	    if tab == 5 then
+		    minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, i))
+	    end
+	else
+		restart = false
+	end
+    end
+    if restart then
+	minetest.after(0.1, update_post_office, player)
+    end
+end
 
 minetest.register_node("saturn:space_station_hatch", {
 	description = "Space station hatch",
@@ -464,10 +483,12 @@ minetest.register_node("saturn:space_station_hatch", {
 			local ship_lua = player:get_attach():get_luaentity()
 			ship_lua['current_gui_tab']=1
 			ship_lua['last_ss']=ss.index
+			ship_lua['is_node_gui_opened']=true
 			minetest.show_formspec(
 				player:get_player_name(),
 				"saturn:space_station",
 				saturn.get_space_station_formspec(player, 1, _indx))
+			minetest.after(0.1, update_post_office, player)
 		    end
 		    return
 		end
