@@ -461,13 +461,13 @@ minetest.register_node("saturn:space_station_hatch", {
 	    for _indx,ss in ipairs(saturn.human_space_station) do
 		if saturn.is_inside_aabb(pos,ss.minp,ss.maxp) then
 		    if player:get_attach() then
+			local ship_lua = player:get_attach():get_luaentity()
+			ship_lua['current_gui_tab']=1
+			ship_lua['last_ss']=ss.index
 			minetest.show_formspec(
 				player:get_player_name(),
 				"saturn:space_station",
 				saturn.get_space_station_formspec(player, 1, _indx))
-			local ship_lua = player:get_attach():get_luaentity()
-			ship_lua['current_gui_tab']=1
-			ship_lua['last_ss']=ss.index
 		    end
 		    return
 		end
