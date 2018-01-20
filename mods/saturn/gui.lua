@@ -80,13 +80,51 @@ local get_formspec_label_with_bg_color = function(x,y,w,h,color,text)
 	return "box["..x..","..y..";"..w..","..h..";"..color.."]".."label["..x..","..(y-0.2)..";"..text.."]"
 end
 
+local get_equipment_box = function(player, iname, ix, iy, w, h, color)
+    local inv = player:get_inventory()
+    local name = player:get_player_name()
+    local formspec = ""
+    local size = inv:get_size(iname)
+    local dx, dy
+    if size > 0 then
+	formspec = formspec..(
+	    "box"..("["..
+		ix..","..iy..";"..
+		(w-0.2)..","..(h-0.1)..";"..
+		color..
+	    "]").."list"..("["..
+		"current_player;"..iname..";"..
+		ix..","..iy..";"..
+		w..","..h..";"..
+	    "]")
+	)
+	for dx = 0, w-1 do
+	    for dy = 0, h-1 do
+		local loc = dy*w+dx+1
+		if loc <= size then
+		    formspec = formspec.."image_button"..("["..
+			(ix+dx+0.81)..","..(iy+dy)..";"..
+			"0.3,0.4;"..
+			"saturn_info_button_icon.png;"..(
+			    "item_info_player+"..
+			    name.."+"..
+			    iname.."+"..
+			    loc..";"
+			)..
+		    "]")
+		end
+	    end
+	end
+    end
+    return formspec
+end
 
 saturn.get_ship_equipment_formspec = function(player)
 	local inv = player:get_inventory()
 	local name = player:get_player_name()
 	-- Hull
-	local formspec = "list[current_player;ship_hull;2,0;1,1;]".."box[2,0;0.8,0.9;#FFFFFF]"..
-	"image_button[2.81,0;0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+ship_hull+1;]"..
+	local formspec =
+	get_formspec_label_with_bg_color(0,0.6,0.8,0.2,"#FFFFFF","Hull")..
 	get_formspec_label_with_bg_color(0,0.6,0.8,0.2,"#FFFFFF","Hull")..
 	get_formspec_label_with_bg_color(0,1.0,0.8,0.2,"#000000","Weapons")..
 	get_formspec_label_with_bg_color(0,1.4,0.8,0.2,"#FFA800","Engine")..
@@ -94,65 +132,15 @@ saturn.get_ship_equipment_formspec = function(player)
 	get_formspec_label_with_bg_color(0,2.2,0.8,0.2,"#770000","Droids")..
 	get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Radar")..
 	get_formspec_label_with_bg_color(0,3,0.8,0.2,"#A0A0FF","Forcefield")..
-	get_formspec_label_with_bg_color(0,3.4,0.8,0.2,"#A0FFA0","Special")
-	if inv:get_size("main") > 0 then
-		formspec = formspec.."box[3,0;1.8,3.9;#000000]"..
-		"list[current_player;main;3,0;2,4;]"
-		for ix = 3, 4 do
-			for iy = 0, math.ceil(inv:get_size("main")/3)-1 do
-				formspec = formspec.."image_button["..(ix+0.81)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+main+"..(ix-2+3*iy)..";]"
-			end
-		end
-	end
-	if inv:get_size("engine") > 0 then
-		formspec = formspec.."box[5,0;1.8,3.9;#FFA800]"..
-		"list[current_player;engine;5,0;2,4;]"
-		for ix = 5, 6 do
-			for iy = 0, math.ceil(inv:get_size("engine")/2)-1 do
-				formspec = formspec.."image_button["..(ix+0.81)..","..(iy)..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+engine+"..(ix-4+2*iy)..";]"
-			end
-		end
-	end
-	if inv:get_size("power_generator") > 0 then
-		local ix = 7
-		formspec = formspec.."box["..ix..",0;0.8,3.9;#FF2200]"..
-		"list[current_player;power_generator;"..ix..",0;1,4;]"
-		for iy = 0, inv:get_size("power_generator")-1 do
-			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+power_generator+"..(iy+1)..";]"
-		end
-	end
-	if inv:get_size("droid") > 0 then
-		local ix = 8
-		formspec = formspec.."box["..ix..",0;0.8,3.9;#770000]"..
-		"list[current_player;droid;"..ix..",0;1,4;]"
-		for iy = 0, inv:get_size("droid")-1 do
-			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+droid+"..(iy+1)..";]"
-		end
-	end
-	if inv:get_size("radar") > 0 then
-		local ix = 9
-		formspec = formspec.."box["..ix..",0;0.8,0.9;#00FFF0]"..
-		"list[current_player;radar;"..ix..",0;1,4;]"
-		for iy = 0, inv:get_size("radar")-1 do
-			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+radar+"..(iy+1)..";]"
-		end
-	end
-	if inv:get_size("forcefield_generator") > 0 then
-		local ix = 10
-		formspec = formspec.."box["..ix..",0;0.8,0.9;#A0A0FF]"..
-		"list[current_player;forcefield_generator;"..ix..",0;1,1;]"
-		for iy = 0, inv:get_size("forcefield_generator")-1 do
-			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+forcefield_generator+"..(iy+1)..";]"
-		end
-	end
-	if inv:get_size("special_equipment") > 0 then
-		local ix = 11
-		formspec = formspec.."box["..ix..",0;0.8,3.9;#A0FFA0]"..
-		"list[current_player;special_equipment;"..ix..",0;1,4;]"
-		for iy = 0, inv:get_size("special_equipment")-1 do
-			formspec = formspec.."image_button["..(ix+0.81)..","..iy..";0.3,0.4;saturn_info_button_icon.png;item_info_player+"..name.."+special_equipment+"..(iy+1)..";]"
-		end
-	end
+	get_formspec_label_with_bg_color(0,3.4,0.8,0.2,"#A0FFA0","Special")..
+	get_equipment_box(player, "ship_hull", 2, 0, 1, 1,"#FFFFFF")..
+	get_equipment_box(player, "main", 3, 0, 2, 4,"#000000")..
+	get_equipment_box(player, "engine", 5, 0, 2, 4,"#FFA800")..
+	get_equipment_box(player, "power_generator", 7, 0, 1, 4,"#FF2200")..
+	get_equipment_box(player, "droid", 8, 0, 1, 4,"#770000")..
+	get_equipment_box(player, "radar", 9, 0, 1, 1,"#00FFF0")..
+	get_equipment_box(player, "forcefield_generator", 10, 0, 1, 1,"#A0A0FF")..
+	get_equipment_box(player, "special_equipment", 11, 0, 1, 4,"#A0FFA0")
 	return formspec
 end
 
