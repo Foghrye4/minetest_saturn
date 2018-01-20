@@ -956,7 +956,7 @@ minetest.register_on_joinplayer(function(player)
 	if flb_pos then
 		minetest.forceload_block(flb_pos)
 	end
-	minetest.after(10, saturn.restore_missing_ship, player)
+	saturn.restore_missing_ship(player)
 end)
 
 minetest.register_on_leaveplayer(function(player)
