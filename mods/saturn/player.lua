@@ -2,9 +2,12 @@ local function throw_away_unfitted_items_from_hold(player_inv, slots_max)
     if player_inv:get_size("hold") > slots_max then
 	for listpos,stack in pairs(player_inv:get_list("hold")) do
 	    if listpos > slots_max and stack ~= nil then
-		player_inv:remove_item(list_name, stack)
-		if player:get_attach() then
+		local count = stack:get_count()
+		if count > 0 then
+		    player_inv:remove_item(list_name, stack)
+		    if player:get_attach() then
 			saturn.throw_item(stack, player:get_attach(), player:getpos())
+		    end
 		end
 	    end
 	end
@@ -16,8 +19,11 @@ local function remove_unfitted_items_to_hold(player_inv, list_name, slots_max)
     if player_inv:get_size(list_name) > slots_max then
 	for listpos,stack in pairs(player_inv:get_list(list_name)) do
 	    if listpos > slots_max and stack ~= nil then
-		player_inv:remove_item(list_name, stack)
-		player_inv:add_item("hold", stack)
+		local count = stack:get_count()
+		if count > 0 then
+		    player_inv:remove_item(list_name, stack)
+		    player_inv:add_item("hold", stack)
+		end
 	    end
 	end
     end
