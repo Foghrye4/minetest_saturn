@@ -209,7 +209,9 @@ end
 
 local get_player_inventory_formspec = function(player, tab)
 	local name = player:get_player_name()
-	local default_formspec = "tabheader[0,0;tabs;Status,Hull,Map;"..tab..";true;false]"
+	local default_formspec =
+		"size[15,9.6]" ..
+		"tabheader[0,0;tabs;Status,Hull,Map;"..tab..";true;false]"
 	local hull = player:get_inventory():get_stack("ship_hull", 1)
 	local hull_stats = saturn.get_item_stats(hull:get_name())
 	if hull_stats then
@@ -225,8 +227,7 @@ local get_player_inventory_formspec = function(player, tab)
 			local velocity = vector.length(ship:getvelocity())
 			local traction = ship_lua['traction'] + (ship_lua.total_modificators['traction'] or 0)
 			local forcefield_protection = ship_lua['forcefield_protection'] + (ship_lua.total_modificators['forcefield_protection'] or 0)
-			return "size[4,2.6]"..
-				default_formspec..
+			return default_formspec..
 				"label[0,0;"..minetest.formspec_escape("Hull damage: ")..string.format ('%4.0f',display_status).."/"..hull_max_wear.."]"..
 				"label[0,0.25;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
 				"label[0,0.5;"..minetest.formspec_escape("Occupied hold volume: ")..string.format ('%4.2f',used).."/"..max_volume.." m3]"..
@@ -237,14 +238,16 @@ local get_player_inventory_formspec = function(player, tab)
 				"label[0,1.75;"..minetest.formspec_escape("Free power: ")..string.format ('%4.0f',ship_lua['free_power']).." MW]"..
 				"button[0,2;4,1;abandon_ship;Abandon ship]"
 		elseif tab == 2 then
-			return "size[12,7]"..default_formspec..saturn.get_ship_equipment_formspec(player)..
-				saturn.get_main_inventory_formspec(player,4.25)
+			return default_formspec..
+				saturn.get_ship_equipment_formspec(player)..
+				saturn.get_main_inventory_formspec(player,5.85)
 		elseif tab == 3 then
 			local ship = player:get_attach()
 			local ship_lua = ship:get_luaentity()
 			local map_scale = ship_lua['map_scale'] or 1
 			local map_projection = ship_lua['map_projection'] or 1
-			return "size[9,8.6]"..default_formspec..get_map_formspec(map_scale, map_projection, player)
+			return default_formspec..
+				get_map_formspec(map_scale, map_projection, player)
 		end
 	end
 	return default_formspec
