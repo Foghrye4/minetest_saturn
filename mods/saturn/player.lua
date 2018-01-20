@@ -85,7 +85,6 @@ end
 local function apply_cargo(player, new_carried_weight)
 	local ship_lua = player:get_attach():get_luaentity()
 	ship_lua['weight']=new_carried_weight
-	player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
 end
 
 saturn.calculate_carried_weight = calculate_carried_weight
@@ -381,7 +380,6 @@ local refresh_ship_equipment = function(player, list_to)
     	if ship_lua['free_power'] > 0 and ship_lua['radar_range'] > 0 then
 	    saturn.radars[player:get_player_name()] = {obj = player:get_attach(), radius = ship_lua['radar_range'] + (ship_lua.total_modificators['radar_range'] or 0)}
 	end
-	player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
 end
 
 saturn.refresh_ship_equipment = refresh_ship_equipment
@@ -918,8 +916,22 @@ saturn.restore_missing_ship = function(player)
     end
 end
 
+local joined_players = {}
+
+local function update_player_formspec(player)
+    local name = player:get_player_name()
+    if joined_players[name] then
+	local ship_lua = player:get_attach():get_luaentity()
+	if not ship_lua['info_active'] then
+		player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
+	end
+	minetest.after(0.1, update_player_formspec, player)
+    end
+end
+
 minetest.register_on_joinplayer(function(player)
 	local name = player:get_player_name()
+	joined_players[name] = true
         player:set_sky({r=0, g=0, b=0, a=0}, "skybox", skybox)
 	minetest.hud_replace_builtin("health",hud_healthbar_definition)
 	player:hud_add(hud_health_energy_bar_frame_definition)
@@ -948,9 +960,12 @@ minetest.register_on_joinplayer(function(player)
 		minetest.forceload_block(flb_pos)
 	end
 	saturn.restore_missing_ship(player)
+	update_player_formspec(player)
 end)
 
 minetest.register_on_leaveplayer(function(player)
+	local name = player:get_player_name()
+	joined_players[name] = nil
 	saturn:save_players()
 	local flb_pos = saturn.players_info[player:get_player_name()]['forceload_pos']
 	if flb_pos then

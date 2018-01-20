@@ -430,7 +430,6 @@ saturn.punch_object = function(punched, puncher, damage)
 			end
 			saturn.refresh_health_hud(punched)
 			local name = punched:get_player_name()
-			punched:set_inventory_formspec(saturn.get_player_inventory_formspec(punched,ship_lua['current_gui_tab']))
 			ship_lua.hit_effect_timer = 3.0
 			ship_lua.last_attacker = puncher
 

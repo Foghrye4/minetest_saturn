@@ -317,6 +317,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
     if ship then
 	local ship_lua = ship:get_luaentity()
 	if fields.tabs or fields.ii_return then
+		if fields.ii_return then
+			ship_lua['info_active'] = nil
+		end
 		local tab = ship_lua['current_gui_tab']
 		if fields.tabs then
 			tab = tonumber(fields.tabs)
@@ -324,8 +327,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		ship_lua['current_gui_tab'] = tab
 		if formname == "saturn:space_station" then
 			minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, ship_lua['last_ss']))
-		else
-			player:set_inventory_formspec(get_player_inventory_formspec(player, tab))
 		end
 	elseif fields.repair then
 		saturn.repair_player_inventory_and_get_price(player, true)
@@ -352,7 +353,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			if match == 1 and parameters_list then
 				local scale = tonumber(parameters_list)
 				ship_lua['map_scale'] = scale
-				player:set_inventory_formspec(get_player_inventory_formspec(player, 3))
 			end
 		end
 		if fields.quit then
@@ -372,6 +372,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 		end
 	elseif fields.quit then
 		ship_lua['is_node_gui_opened'] = false
+		ship_lua['info_active'] = nil
 	else
 		for key,v in pairs(fields) do
 			local parameters_list, match = string.gsub(key, "^item_info_", "")
@@ -392,6 +393,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 				end
 				local item_stack = inventory:get_stack(inventory_list_name, inventory_slot_number)
 				if not item_stack:is_empty() then
+					ship_lua['info_active'] = true
 					if formname == "saturn:space_station" then
 						minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_item_info_formspec(item_stack))
 					else
