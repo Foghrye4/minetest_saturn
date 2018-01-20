@@ -7,7 +7,6 @@ if not minetest.register_on_player_inventory_add_item then
     saturn.players_weights_total = {}    
 
     calculate_carried_weight = saturn.calculate_carried_weight
-    calculate_carried_volume = saturn.calculate_carried_volume
     refresh_ship_equipment = saturn.refresh_ship_equipment
     apply_cargo = saturn.apply_cargo
 
@@ -42,7 +41,7 @@ if not minetest.register_on_player_inventory_add_item then
 		    weight = weight + listweight
 		end
 		if saturn.players_weights_total[name] ~= weight then
-		    	apply_cargo(player,weight,calculate_carried_volume(inv))
+		    	apply_cargo(player,weight)
 			saturn.players_weights_total[name] = weight
 		end
 	    end

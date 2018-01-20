@@ -82,29 +82,13 @@ local function calculate_carried_weight(inv)
 	return weight
 end
 
-local function calculate_carried_volume(inv)
-	local volume = 0
-	for list_name,list in pairs(inv:get_lists()) do
-		if list_name ~= "ship_hull" and list_name ~= "craft" and list_name ~= "craftresult" then
-			for listpos,stack in pairs(list) do
-				if stack ~= nil then
-					volume = volume + saturn.get_item_volume(list_name, stack) * stack:get_count()
-				end
-			end
-		end
-	end
-	return volume
-end
-
-local function apply_cargo(player, new_carried_weight, new_carried_volume)
+local function apply_cargo(player, new_carried_weight)
 	local ship_lua = player:get_attach():get_luaentity()
 	ship_lua['weight']=new_carried_weight
-	ship_lua['volume']=new_carried_volume
 	player:set_inventory_formspec(saturn.get_player_inventory_formspec(player,ship_lua['current_gui_tab']))
 end
 
 saturn.calculate_carried_weight = calculate_carried_weight
-saturn.calculate_carried_volume = calculate_carried_volume
 saturn.apply_cargo = apply_cargo
 
 local function apply_modificator_to_ship_safe(ship_lua, modificator_key, value)
@@ -150,14 +134,12 @@ local function refresh_hull(player)
 	local stats = saturn.get_item_stats(stack_name)
 		ship_lua.is_escape_pod = (stack_name == "saturn:escape_pod")
 		if stats then
-			if stats['free_space'] and 
-			stats['engine_slots'] and
+			if stats['engine_slots'] and
 			stats['power_generator_slots'] and
 			stats['droid_slots'] and
 			stats['radar_slots'] and
 			stats['forcefield_generator_slots'] and
 			stats['special_equipment_slots'] then
-				ship_lua['free_space'] = stats['free_space']
 				define_player_inventory_slots(player, stack)
 				player:set_properties(stats.player_visual)
 				local metadata = minetest.deserialize(stack:get_metadata())
@@ -561,7 +543,7 @@ local attach_player_to_ship = function(player, ship_lua)
 	    define_player_inventory_slots(player, start_hull)
 	    give_initial_stuff(player, start_hull)
 	end
-	apply_cargo(player,calculate_carried_weight(player:get_inventory()),calculate_carried_volume(player:get_inventory()))
+	apply_cargo(player,calculate_carried_weight(player:get_inventory()))
 	refresh_ship_equipment(player, "any")
 	saturn.refresh_health_hud(player)
 end
@@ -610,8 +592,6 @@ local spaceship = {
 	one_second_timer = 0.0,
 	hit_effect_timer = 0,
 	weight = 65535,
-	volume = 0,
-	free_space = 0,
 	traction = 0,
 	droid_efficiency = 0,
 	radar_range = 0,
@@ -997,16 +977,9 @@ if minetest.register_on_player_inventory_add_item then
 	    local name = player:get_player_name()
 	    local ship_lua = player:get_attach():get_luaentity()
 	    local new_carried_weight = ship_lua['weight'] + saturn.get_item_weight(list_to, stack) * stack:get_count()
-	    local new_carried_volume = ship_lua['volume'] + saturn.get_item_volume(list_to, stack) * stack:get_count()
 	    local hull = player:get_inventory():get_stack("ship_hull", 1)
-	    local hull_volume = ship_lua['free_space']
 	    refresh_ship_equipment(player, list_to)
-	    apply_cargo(player,new_carried_weight, new_carried_volume)
-	    if list_to ~= "ship_hull" and new_carried_volume > hull_volume then
-		minetest.sound_play("saturn_whoosh", {to_player = name})
-		saturn.throw_item(stack, player:get_attach(), player:getpos())
-		player:get_inventory():remove_item(list_to, stack)
-	    end
+	    apply_cargo(player,new_carried_weight)
     	end
     end)
 
@@ -1016,14 +989,8 @@ if minetest.register_on_player_inventory_add_item then
 		local name = player:get_player_name()
 		local ship_lua = player:get_attach():get_luaentity()
 		local new_carried_weight = ship_lua['weight'] + saturn.get_item_weight(list_to, new_item) * new_item:get_count() - saturn.get_item_weight(list_to, old_item) * old_item:get_count()
-		local hull_volume = ship_lua['free_space']
-		local new_carried_volume = ship_lua['volume'] + saturn.get_item_volume(list_to, new_item) * new_item:get_count() - saturn.get_item_volume(list_to, old_item) * old_item:get_count()
 		refresh_ship_equipment(player, list_to)
-		apply_cargo(player,new_carried_weight, new_carried_volume)
-		if list_to ~= "ship_hull" and new_carried_volume > hull_volume then
-			saturn.throw_item(new_item, player:get_attach(), player:getpos())
-			player:get_inventory():remove_item(list_to, new_item)
-		end
+		apply_cargo(player,new_carried_weight)
 	    end
     	end
     end)
@@ -1033,9 +1000,8 @@ if minetest.register_on_player_inventory_add_item then
 	    local name = player:get_player_name()
 	    local ship_lua = player:get_attach():get_luaentity()
 	    local new_carried_weight = ship_lua['weight'] - saturn.get_item_weight(list_from, stack) * stack:get_count()
-	    local new_carried_volume = ship_lua['volume'] - saturn.get_item_volume(list_from, stack) * stack:get_count()
 	    refresh_ship_equipment(player, list_from)
-	    apply_cargo(player,new_carried_weight, new_carried_volume)
+	    apply_cargo(player,new_carried_weight)
 	end
     end)
 

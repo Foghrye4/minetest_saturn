@@ -178,6 +178,35 @@ saturn.get_main_inventory_formspec = function(player, vertical_offset)
     return default_formspec
 end
 
+local calculate_volumes_for_inventory = function(inv, name, output)
+    local slotcnt = inv:get_size(name)
+    for i=1,slotcnt do
+	local content = inv:get_stack(name, i)
+	local count = content:get_count()
+	if count == 0 then
+	    output.free = output.free + 100
+	else
+	    output.allocated = output.allocated + 100
+	    local volume = saturn.get_item_volume_core(content)
+	    output.used = output.used + volume * count
+	end
+    end
+end
+
+local calculate_volumes = function(player)
+    local inv = player:get_inventory()
+    local output = {allocated = 0, used = 0, free = 0}
+    calculate_volumes_for_inventory(inv, "hold", output)
+    calculate_volumes_for_inventory(inv, "main", output)
+    calculate_volumes_for_inventory(inv, "engine", output)
+    calculate_volumes_for_inventory(inv, "power_generator", output)
+    calculate_volumes_for_inventory(inv, "droid", output)
+    calculate_volumes_for_inventory(inv, "radar", output)
+    calculate_volumes_for_inventory(inv, "forcefield_generator", output)
+    calculate_volumes_for_inventory(inv, "special_equipment", output)
+    return output.allocated, output.used, output.free
+end
+
 local get_player_inventory_formspec = function(player, tab)
 	local name = player:get_player_name()
 	local default_formspec = "tabheader[0,0;tabs;Status,Hull,Map;"..tab..";true;false]"
@@ -185,10 +214,12 @@ local get_player_inventory_formspec = function(player, tab)
 	local hull_stats = saturn.get_item_stats(hull:get_name())
 	if hull_stats then
 		if tab == 1 then
+			local allocated, used, free
+			allocated, used, free = calculate_volumes(player)
 			local hull_max_wear = hull_stats['max_wear'] or saturn.MAX_ITEM_WEAR
 			local hull_wear = hull:get_wear()
 			local display_status = hull_wear * hull_max_wear / saturn.MAX_ITEM_WEAR
-			local max_volume = hull_stats['free_space'] or 0
+			local max_volume = allocated + free
 			local ship = player:get_attach()
 			local ship_lua = ship:get_luaentity()
 			local velocity = vector.length(ship:getvelocity())
@@ -198,7 +229,7 @@ local get_player_inventory_formspec = function(player, tab)
 				default_formspec..
 				"label[0,0;"..minetest.formspec_escape("Hull damage: ")..string.format ('%4.0f',display_status).."/"..hull_max_wear.."]"..
 				"label[0,0.25;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
-				"label[0,0.5;"..minetest.formspec_escape("Occupied hold volume: ")..string.format ('%4.2f',ship_lua['volume']).."/"..max_volume.." m3]"..
+				"label[0,0.5;"..minetest.formspec_escape("Occupied hold volume: ")..string.format ('%4.2f',used).."/"..max_volume.." m3]"..
 				"label[0,0.75;"..minetest.formspec_escape("Total ship weight: ")..string.format ('%4.0f',ship_lua['weight']).." kg]"..
 				"label[0,1.0;"..minetest.formspec_escape("Traction: ")..string.format ('%4.1f',traction/1000).." kN]"..
 				"label[0,1.25;"..minetest.formspec_escape("Forcefield damage absorption: ")..string.format ('%4.1f',forcefield_protection).." %]"..

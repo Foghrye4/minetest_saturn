@@ -162,24 +162,30 @@ saturn.get_item_weight = function(list_name, item_stack)
 	return value
 end
 
-saturn.get_item_volume = function(list_name, item_stack)
+saturn.get_item_volume_core = function(item_stack)
 	local item_name = item_stack:get_name()
 	local value = 0.01
-	if list_name == "ship_hull" or string.find(list_name,"^hangar") then
-		value = 0
-	else
-		local stats = minetest.registered_items[item_name]
-		if stats ~= nil then
-			if stats['volume'] then
-				value = stats['volume']
-				local metadata = minetest.deserialize(item_stack:get_metadata())
-				if metadata then
-					if metadata['volume'] then
-						value = value + metadata['volume']
-					end
+	local stats = minetest.registered_items[item_name]
+	if stats ~= nil then
+		if stats['volume'] then
+			value = stats['volume']
+			local metadata = minetest.deserialize(item_stack:get_metadata())
+			if metadata then
+				if metadata['volume'] then
+					value = value + metadata['volume']
 				end
 			end
 		end
+	end
+	return value
+end
+
+saturn.get_item_volume = function(list_name, item_stack)
+	local value
+	if list_name == "ship_hull" or string.find(list_name,"^hangar") then
+		value = 0
+	else
+		value = saturn.get_item_volume_core(item_stack)
 	end
 	return value
 end
