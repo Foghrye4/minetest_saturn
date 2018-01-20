@@ -76,11 +76,7 @@ local get_map_formspec = function(scale, projection, player)
     return formspec
 end
 
-local get_formspec_label_with_bg_color = function(x,y,w,h,color,text)
-	return "box["..x..","..y..";"..w..","..h..";"..color.."]".."label["..x..","..(y-0.2)..";"..text.."]"
-end
-
-local get_equipment_box = function(player, iname, ix, iy, w, h, color)
+local get_equipment_box = function(title, player, iname, ix, iy, w, h, color)
     local inv = player:get_inventory()
     local name = player:get_player_name()
     local formspec = ""
@@ -88,6 +84,7 @@ local get_equipment_box = function(player, iname, ix, iy, w, h, color)
     local dx, dy
     if size > 0 then
 	formspec = formspec..(
+	    "label["..ix..","..(iy-0.5)..";"..title.."]"..
 	    "box"..("["..
 		ix..","..iy..";"..
 		(w-0.2)..","..(h-0.1)..";"..
@@ -122,25 +119,15 @@ end
 saturn.get_ship_equipment_formspec = function(player)
 	local inv = player:get_inventory()
 	local name = player:get_player_name()
-	-- Hull
 	local formspec =
-	get_formspec_label_with_bg_color(0,0.6,0.8,0.2,"#FFFFFF","Hull")..
-	get_formspec_label_with_bg_color(0,0.6,0.8,0.2,"#FFFFFF","Hull")..
-	get_formspec_label_with_bg_color(0,1.0,0.8,0.2,"#000000","Weapons")..
-	get_formspec_label_with_bg_color(0,1.4,0.8,0.2,"#FFA800","Engine")..
-	get_formspec_label_with_bg_color(0,1.8,0.8,0.2,"#FF2200","Power")..
-	get_formspec_label_with_bg_color(0,2.2,0.8,0.2,"#770000","Droids")..
-	get_formspec_label_with_bg_color(0,2.6,0.8,0.2,"#00FFF0","Radar")..
-	get_formspec_label_with_bg_color(0,3,0.8,0.2,"#A0A0FF","Forcefield")..
-	get_formspec_label_with_bg_color(0,3.4,0.8,0.2,"#A0FFA0","Special")..
-	get_equipment_box(player, "ship_hull", 2, 0, 1, 1,"#FFFFFF")..
-	get_equipment_box(player, "main", 3, 0, 2, 4,"#000000")..
-	get_equipment_box(player, "engine", 5, 0, 2, 4,"#FFA800")..
-	get_equipment_box(player, "power_generator", 7, 0, 1, 4,"#FF2200")..
-	get_equipment_box(player, "droid", 8, 0, 1, 4,"#770000")..
-	get_equipment_box(player, "radar", 9, 0, 1, 1,"#00FFF0")..
-	get_equipment_box(player, "forcefield_generator", 10, 0, 1, 1,"#A0A0FF")..
-	get_equipment_box(player, "special_equipment", 11, 0, 1, 4,"#A0FFA0")
+	get_equipment_box("Hull", player, "ship_hull", 13, 3.4, 1, 1,"#FFFFFF")..
+	get_equipment_box("Weapons", player, "main", 0, 0.4, 2, 4,"#000000")..
+	get_equipment_box("Engines", player, "engine", 2, 0.4, 2, 4,"#FFA800")..
+	get_equipment_box("Power", player, "power_generator", 4, 0.4, 2, 2,"#FF2200")..
+	get_equipment_box("Droids", player, "droid", 6, 0.4, 2, 2,"#770000")..
+	get_equipment_box("Radar", player, "radar", 6, 3.4, 1, 1,"#00FFF0")..
+	get_equipment_box("Shields", player, "forcefield_generator", 10, 0.4, 5, 2,"#A0A0FF")..
+	get_equipment_box("Special", player, "special_equipment", 8, 0.4, 2, 2,"#A0FFA0")
 	return formspec
 end
 
