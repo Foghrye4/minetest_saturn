@@ -59,6 +59,7 @@ register_node_with_stats("saturn:water_ice", {
 	volume = 1, --m3
 	price = 1.43,
 	toughness = 8,
+	stack_max = 100,
 })
 
 table.insert(saturn.ore_market_items, "saturn:water_ice")
@@ -74,6 +75,7 @@ register_node_with_stats("saturn:bauxite", {
 	noise_offset = -1.1,
 	is_ore = true,
 	toughness = 8,
+	stack_max = 100,
 })
 
 register_node_with_stats("saturn:ironnickel", {
@@ -87,6 +89,7 @@ register_node_with_stats("saturn:ironnickel", {
 	noise_offset = -1.1,
 	is_ore = true,
 	toughness = 80,
+	stack_max = 100,
 })
 
 register_node_with_stats("saturn:gold", {
@@ -100,6 +103,7 @@ register_node_with_stats("saturn:gold", {
 	noise_offset = -1.5,
 	is_ore = true,
 	toughness = 80,
+	stack_max = 100,
 })
 
 register_node_with_stats("saturn:pitchblende", {
@@ -113,6 +117,7 @@ register_node_with_stats("saturn:pitchblende", {
 	noise_offset = -1.5,
 	is_ore = true,
 	toughness = 80,
+	stack_max = 100,
 })
 
 register_node_with_stats("saturn:nitrile_ice", { -- Give ammonia and various carboxylic acids with water
@@ -126,6 +131,7 @@ register_node_with_stats("saturn:nitrile_ice", { -- Give ammonia and various car
 	noise_offset = -1.1,
 	is_ore = true,
 	toughness = 8,
+	stack_max = 100,
 })
 
 register_node_with_stats("saturn:carbon_oxides_ice", { -- Give some water, carbon dioxide and some amorphic carbon
@@ -139,6 +145,7 @@ register_node_with_stats("saturn:carbon_oxides_ice", { -- Give some water, carbo
 	noise_offset = -1.1,
 	is_ore = true,
 	toughness = 8,
+	stack_max = 100,
 })
 
 register_node_with_stats("saturn:hydrogen_sulphide_ice", { -- Give some hydrogen sulphide and some sulphur
@@ -152,6 +159,7 @@ register_node_with_stats("saturn:hydrogen_sulphide_ice", { -- Give some hydrogen
 	noise_offset = -1.1,
 	is_ore = true,
 	toughness = 8,
+	stack_max = 100,
 })
 
 
@@ -166,4 +174,5 @@ register_node_with_stats("saturn:phosphine_clathrate", { -- Give phosphine, orth
 	noise_offset = -1.2,
 	is_ore = true,
 	toughness = 8,
+	stack_max = 100,
 })
