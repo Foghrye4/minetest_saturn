@@ -58,7 +58,6 @@ register_wearable_item("saturn:basic_ship_hull",{
     		},
 	weight = 40000,
 	volume = 400,
-	free_space = 100,
 	price = 300,
 	max_wear = 100, -- out of 65535
 	weapon_slots = 1,
@@ -88,7 +87,6 @@ register_wearable_item("saturn:basic_ship_hull_me",{
     		},
 	weight = 60000,
 	volume = 800,
-	free_space = 200,
 	price = 8000,
 	max_wear = 400, -- out of 65535
 	weapon_slots = 3,
@@ -118,7 +116,6 @@ register_wearable_item("saturn:overkiller_hull",{
     		},
 	weight = 1200000,
 	volume = 8000,
-	free_space = 2000,
 	price = 2000000,
 	max_wear = 65535, -- out of 65535
 	weapon_slots = 8,
@@ -148,7 +145,6 @@ register_wearable_item("saturn:escape_pod",{
     		},
 	weight = 1000,
 	volume = 0,
-	free_space = 0,
 	price = 0,
 	max_wear = 65535, -- out of 65535
 	weapon_slots = 0,
