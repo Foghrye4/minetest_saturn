@@ -182,41 +182,64 @@ local calculate_volumes = function(player)
     return output.allocated, output.used, output.free
 end
 
+local get_cargo_hold_space_status = function(player)
+    local allocated, used, free
+    allocated, used, free = calculate_volumes(player)
+    local name = player:get_player_name()
+    local money_str = string.format ('%4.0f',saturn.players_info[name]['money'])
+    local ship = player:get_attach()
+    local ship_lua = ship:get_luaentity()
+    local weight = ship_lua['weight']
+    local traction = ship_lua['traction'] + (ship_lua.total_modificators['traction'] or 0)
+    local forcefield_protection = ship_lua['forcefield_protection'] + (ship_lua.total_modificators['forcefield_protection'] or 0)
+    local protection = string.format ('%1.1f',forcefield_protection)
+    local formspec = (
+	"label[0,4.6;Cargo hold space (m3)]"..
+	"label[0,4.95;Used]"..
+	"label[0,5.3;"..string.format('%1.2f',used).."]"..
+	"label[1.5,4.95;Alloc.]"..
+	"label[1.5,5.3;"..string.format('%1.0f',allocated).."]"..
+	"label[3,4.95;Free]"..
+	"label[3,5.3;"..string.format('%1.0f',free).."]"..
+	"label[4.2,4.6;Total ship]"..
+	"label[4.2,4.9;weight (kg)]"..
+	"label[4.2,5.3;"..string.format ('%1.0f',weight).."]"..
+	"label[6,4.6;Traction]"..
+	"label[6,4.9;(kN)]"..
+	"label[6,5.3;"..string.format ('%1.1f',traction/1000).."]"..
+	"label[7.5,4.6;Maximal]"..
+	"label[7.5,4.9;accel. (m/s2)]"..
+	"label[7.5,5.3;"..string.format('%1.4f',traction/weight).."]"..
+	"label[7.5,2.4;Power output]"..
+	"label[7.5,2.7;??? MW]"..
+	"label[7.5,3.1;Consumption]"..
+	"label[7.5,3.4;??? MW]"..
+	"label[7.5,3.8;Battery level]"..
+	"label[7.5,4.1;??? MJ]"..
+	"label[9.7,2.4;Shield output]"..
+	"label[9.7,2.8;"..protection.." %/s]"..
+	"label[9.7,3.4;Shield level]"..
+	"label[9.7,3.8;??? %]"..
+	"label[9.7,4.9;Money (Cr)]"..
+	"label[9.7,5.3;"..money_str.."]"
+    )
+    return formspec
+end
+
 local get_player_inventory_formspec = function(player, tab)
 	local name = player:get_player_name()
 	local default_formspec =
 		"size[15,9.6]" ..
-		"tabheader[0,0;tabs;Status,Hull,Map;"..tab..";true;false]"
+		"tabheader[0,0;tabs;Hull,Map;"..tab..";true;false]"
 	local hull = player:get_inventory():get_stack("ship_hull", 1)
 	local hull_stats = saturn.get_item_stats(hull:get_name())
 	if hull_stats then
 		if tab == 1 then
-			local allocated, used, free
-			allocated, used, free = calculate_volumes(player)
-			local hull_max_wear = hull_stats['max_wear'] or saturn.MAX_ITEM_WEAR
-			local hull_wear = hull:get_wear()
-			local display_status = hull_wear * hull_max_wear / saturn.MAX_ITEM_WEAR
-			local max_volume = allocated + free
-			local ship = player:get_attach()
-			local ship_lua = ship:get_luaentity()
-			local velocity = vector.length(ship:getvelocity())
-			local traction = ship_lua['traction'] + (ship_lua.total_modificators['traction'] or 0)
-			local forcefield_protection = ship_lua['forcefield_protection'] + (ship_lua.total_modificators['forcefield_protection'] or 0)
 			return default_formspec..
-				"label[0,0;"..minetest.formspec_escape("Hull damage: ")..string.format ('%4.0f',display_status).."/"..hull_max_wear.."]"..
-				"label[0,0.25;"..minetest.formspec_escape("Money: ")..string.format ('%4.0f',saturn.players_info[name]['money']).." Cr.]"..
-				"label[0,0.5;"..minetest.formspec_escape("Occupied hold volume: ")..string.format ('%4.2f',used).."/"..max_volume.." m3]"..
-				"label[0,0.75;"..minetest.formspec_escape("Total ship weight: ")..string.format ('%4.0f',ship_lua['weight']).." kg]"..
-				"label[0,1.0;"..minetest.formspec_escape("Traction: ")..string.format ('%4.1f',traction/1000).." kN]"..
-				"label[0,1.25;"..minetest.formspec_escape("Forcefield damage absorption: ")..string.format ('%4.1f',forcefield_protection).." %]"..
-				"label[0,1.5;"..minetest.formspec_escape("Max acceleration: ")..string.format ('%4.1f',traction/ship_lua['weight']).." m/s2]"..
-				"label[0,1.75;"..minetest.formspec_escape("Free power: ")..string.format ('%4.0f',ship_lua['free_power']).." MW]"..
-				"button[0,2;4,1;abandon_ship;Abandon ship]"
-		elseif tab == 2 then
-			return default_formspec..
+				get_cargo_hold_space_status(player)..
 				saturn.get_ship_equipment_formspec(player)..
 				saturn.get_main_inventory_formspec(player,5.85)
-		elseif tab == 3 then
+		elseif tab == 2 then
 			local ship = player:get_attach()
 			local ship_lua = ship:get_luaentity()
 			local map_scale = ship_lua['map_scale'] or 1
@@ -313,18 +336,6 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 	elseif fields.deliver then
 		saturn.deliver_package_and_get_reward(ship_lua['last_ss'], player, true)
 		minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, ship_lua['current_gui_tab'], ship_lua['last_ss']))
-	elseif fields.abandon_ship then
-		local inv = player:get_inventory()
-		for list_name,list in pairs(inv:get_lists()) do
-			for listpos,stack in pairs(list) do
-				if stack ~= nil and not stack:is_empty() then
-					inv:remove_item(list_name, stack)
-					saturn.throw_item(stack, ship, player:getpos())
-				end
-			end
-		end
-		minetest.sound_play("saturn_item_drop", {to_player = name})
-		inv:set_stack("ship_hull", 1, saturn:get_escape_pod())
 	elseif fields.set_waypoint then
 		for key,v in pairs(fields) do
 			local parameters_list, match = string.gsub(key, "^set_map_scale_", "")
