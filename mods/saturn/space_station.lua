@@ -54,13 +54,18 @@ if not saturn.human_space_station then
 end
 
 local get_item_repair_price = function(stack)
+	local final_repair_price = 0
 	local stats = saturn.get_item_stats(stack:get_name())
 	if stats then
 		if stats['max_wear'] and stats['price'] then
-			return stats['price'] * stack:get_count() * stack:get_wear() * stats['max_wear'] * saturn.REPAIR_PRICE_PER_WEAR / saturn.MAX_ITEM_WEAR
+			local price_for_new = stats['price'] * stack:get_count()
+			local wear = stack:get_wear()
+			local max_repair_price = stats['max_wear'] * saturn.REPAIR_PRICE_PER_WEAR
+			local total_repair_price = price_for_new * wear * max_repair_price
+			final_repair_price = math.floor(total_repair_price / saturn.MAX_ITEM_WEAR)
 		end
 	end
-	return 0
+	return final_repair_price
 end
 
 saturn.repair_player_inventory_and_get_price = function(player, _do_repair)
