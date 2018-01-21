@@ -557,7 +557,7 @@ local create_new_player = function(player)
     	ship_lua.driver_name = name
     	attach_player_to_ship(player, ship_lua)
     else
-	minetest.after(10, saturn.restore_missing_ship, player)
+	saturn.restore_missing_ship(player)
     end
 end
 
@@ -877,11 +877,6 @@ function spaceship:on_step(dtime)
 		elseif pos.y < 1000 and self.object == saturn.player_ship_ref then
 			saturn.player_ship_ref = nil
 		end
-	elseif self.driver_name and self.driver_name ~= "" then
-		local player = minetest.get_player_by_name(self.driver_name)
-		if player then
-			attach_player_to_ship(player, self)
-		end
 	end
 end
 
@@ -895,10 +890,6 @@ function spaceship:on_activate(staticdata, dtime_s)
 				self.driver_name = name
 				self.is_escape_pod = data.is_escape_pod
 				saturn.saturn_spaceships[name] = self.object
-				local player = minetest.get_player_by_name(name)
-				if player then
-					attach_player_to_ship(player, self)
-				end
 			end
 			if data.velocity then
 				self.object:setvelocity(data.velocity)
@@ -956,7 +947,7 @@ minetest.register_on_joinplayer(function(player)
 	if flb_pos then
 		minetest.forceload_block(flb_pos)
 	end
-	minetest.after(10, saturn.restore_missing_ship, player)
+	saturn.restore_missing_ship(player)
 end)
 
 minetest.register_on_leaveplayer(function(player)
