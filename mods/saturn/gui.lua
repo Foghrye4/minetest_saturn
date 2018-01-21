@@ -371,6 +371,11 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			end
 		end
 	elseif fields.quit then
+		if formname == "saturn:space_station" then
+			local tab = ship_lua['last_gui_tab']
+			ship_lua['last_gui_tab'] = nil
+			ship_lua['current_gui_tab'] = tab
+		end
 		ship_lua['is_node_gui_opened'] = false
 	else
 		for key,v in pairs(fields) do

@@ -481,6 +481,7 @@ minetest.register_node("saturn:space_station_hatch", {
 		if saturn.is_inside_aabb(pos,ss.minp,ss.maxp) then
 		    if player:get_attach() then
 			local ship_lua = player:get_attach():get_luaentity()
+			ship_lua['last_gui_tab']=ship_lua['current_gui_tab']
 			ship_lua['current_gui_tab']=1
 			ship_lua['last_ss']=ss.index
 			ship_lua['is_node_gui_opened']=true
