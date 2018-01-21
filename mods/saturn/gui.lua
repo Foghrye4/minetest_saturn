@@ -313,20 +313,19 @@ end
 
 minetest.register_on_player_receive_fields(function(player, formname, fields)
     local name = player:get_player_name()
-    if player:get_attach() then
-	local ship_lua = player:get_attach():get_luaentity()
+    local ship = player:get_attach()
+    if ship then
+	local ship_lua = ship:get_luaentity()
 	if fields.tabs or fields.ii_return then
-		if player:get_attach() then
-			local tab = ship_lua['current_gui_tab']
-			if fields.tabs then
-				tab = tonumber(fields.tabs)
-			end
-			ship_lua['current_gui_tab'] = tab
-			if formname == "saturn:space_station" then
-				minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, ship_lua['last_ss']))
-			else
-				player:set_inventory_formspec(get_player_inventory_formspec(player, tab))
-			end
+		local tab = ship_lua['current_gui_tab']
+		if fields.tabs then
+			tab = tonumber(fields.tabs)
+		end
+		ship_lua['current_gui_tab'] = tab
+		if formname == "saturn:space_station" then
+			minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, ship_lua['last_ss']))
+		else
+			player:set_inventory_formspec(get_player_inventory_formspec(player, tab))
 		end
 	elseif fields.repair then
 		saturn.repair_player_inventory_and_get_price(player, true)
@@ -341,7 +340,7 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 			for listpos,stack in pairs(list) do
 				if stack ~= nil and not stack:is_empty() then
 					inv:remove_item(list_name, stack)
-					saturn.throw_item(stack, player:get_attach(), player:getpos())
+					saturn.throw_item(stack, ship, player:getpos())
 				end
 			end
 		end
@@ -370,13 +369,9 @@ minetest.register_on_player_receive_fields(function(player, formname, fields)
 					ship_lua['waypoint'] = saturn.enemy_space_station[tonumber(number)]
 				end
 			end
-
 		end
-		--minetest.chat_send_all(dump(fields))
 	elseif fields.quit then
-		if player:get_attach() then
-			ship_lua['is_node_gui_opened'] = false
-		end
+		ship_lua['is_node_gui_opened'] = false
 	else
 		for key,v in pairs(fields) do
 			local parameters_list, match = string.gsub(key, "^item_info_", "")
