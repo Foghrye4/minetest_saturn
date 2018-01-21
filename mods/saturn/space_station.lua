@@ -460,7 +460,7 @@ local function update_post_office(player)
 	local i = ship_lua['last_ss']
 	local opened = ship_lua['is_node_gui_opened']
 	if opened then
-	    if tab == 5 then
+	    if tab == 5 and not ship_lua['info_active'] then
 		    minetest.show_formspec(player:get_player_name(), "saturn:space_station", saturn.get_space_station_formspec(player, tab, i))
 	    end
 	else
