@@ -253,6 +253,31 @@ end
 
 saturn.get_player_inventory_formspec = get_player_inventory_formspec
 
+local function update_table(table, new_data)
+    for key,value in pairs(new_data) do
+	table[key] = value
+    end
+end
+
+local function generate_row(row_info, value)
+    if row_info.hidden then
+	return nil
+    end
+    local string_value
+    if row_info.format_proc then
+	string_value = row_info.format_proc(value)
+    elseif row_info.format_numweic ~= nil then
+	assert(type(value) == "number", "Numeric format for non-numeric data specified")
+	string_value = string.format(row_info.format_numweic,value)
+    else
+	string_value = tostring(value)
+    end
+    if row_info.units ~= nil then
+	string_value = string_value .." ".. row_info.units
+    end
+    return row_info.name..": "..string_value
+end
+
 saturn.get_item_info_formspec = function(item_stack)
 	local item_name = item_stack:get_name()
 	local formspec = "size[8,8.6]"..
@@ -265,22 +290,14 @@ saturn.get_item_info_formspec = function(item_stack)
 	row = row + 0.1
 	if minetest.registered_items[item_name] then
 		for key,value in pairs(minetest.registered_items[item_name]) do
-			if not saturn.localisation_and_units[key] then
+			local row_info = saturn.localisation_and_units[key]
+			if not row_info then
 				error("Missing localisation for "..key)
-				return
 			end
-			if not saturn.localisation_and_units[key].hidden then
+			local row_string = generate_row(row_info, value)
+			if row_string ~= nil then
 				row = row + row_step
-				local localisation = saturn.localisation_and_units[key]
-				local string_value
-				if localisation.format_normal == "date" then
-					string_value = saturn.date_to_string(value) .." ".. localisation.units
-				elseif type(value) == "number" then
-					string_value = string.format(localisation.format_normal,value) .." ".. localisation.units
-				else
-					string_value = tostring(value)
-				end
-				formspec = formspec.."label[0,"..row..";"..localisation.name..": "..string_value.."]"
+				formspec = formspec.."label[0,"..row..";"..row_string.."]"
 			end
 		end
 	end
@@ -290,22 +307,20 @@ saturn.get_item_info_formspec = function(item_stack)
 		formspec = formspec.."label[0,"..row..";Special properties:]"
 		row = row + 0.1
 		for key,value in pairs(metadata) do
-			if not saturn.localisation_and_units[key] then
+			local base_row_info = saturn.localisation_and_units[key]
+			if not base_row_info then
 				error("Missing localisation for "..key)
-				return
 			end
-			if not saturn.localisation_and_units[key].hidden then
+			local row_info = {}
+			update_table(row_info, base_row_info)
+			local special_row_info = saturn.localisation_and_units_special[key]
+			if special_row_info then
+				update_table(row_info, special_row_info)
+			end
+			local row_string = generate_row(row_info, value)
+			if row_string ~= nil then
 				row = row + row_step
-				local localisation = saturn.localisation_and_units[key]
-				local string_value
-				if localisation.format_special == "date" then
-					string_value = saturn.date_to_string(value) .." ".. localisation.units
-				elseif type(value) == "number" then
-					string_value = string.format(localisation.format_special,value) .." ".. localisation.units
-				else
-					string_value = tostring(value)
-				end
-				formspec = formspec.."label[0,"..row..";"..localisation.name..": "..string_value.."]"
+				formspec = formspec.."label[0,"..row..";"..row_string.."]"
 			end
 		end
 	end
