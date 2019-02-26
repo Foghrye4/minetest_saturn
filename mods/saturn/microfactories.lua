@@ -106,8 +106,6 @@ minetest.register_node("saturn:display_node", {
 			{-(x+.55), (x+.45), -(x+.55), (x+.55), (x+.55), (x+.55)},
 			-- bottom
 			{-(x+.55), -(x+.55), -(x+.55), (x+.55), -(x+.45), (x+.55)},
-			-- middle (surround protector)
-			{-.55,-.55,-.55, .55,.55,.55},
 		},
 	},
 	selection_box = {
