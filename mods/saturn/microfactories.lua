@@ -97,10 +97,13 @@ minetest.register_node("saturn:display_node", {
 	node_box = {
 		type = "fixed",
 		fixed = {
-			-- sides
+			-- west side
 			{-(x+.55), -(x+.55), -(x+.55), -(x+.45), (x+.55), (x+.55)},
+			-- north side
 			{-(x+.55), -(x+.55), (x+.45), (x+.55), (x+.55), (x+.55)},
+			-- east side
 			{(x+.45), -(x+.55), -(x+.55), (x+.55), (x+.55), (x+.55)},
+			-- south side
 			{-(x+.55), -(x+.55), -(x+.55), (x+.55), (x+.55), -(x+.45)},
 			-- top
 			{-(x+.55), (x+.45), -(x+.55), (x+.55), (x+.55), (x+.55)},
