@@ -617,6 +617,9 @@ local spaceship = {
 
 function spaceship:on_step(dtime)
 	self.age = self.age + dtime
+	if not self.driver then
+		self.object:remove()
+	end
 	if self.driver and self.driver:get_look_dir() then
 		local player = self.driver
 		local name = player:get_player_name()
